@@ -1,0 +1,37 @@
+schema {
+  query: RootQuery
+  mutation: Mutation
+}
+
+type Mutation {
+  addUser(username: String!, email: String!, password: String!): User
+}
+
+type Order {
+  id: ID
+  total: Float
+  totalWithShipping: Float
+  shippingCost: Float
+  status: String
+  products: [orderProducts]
+}
+
+type orderProducts {
+  title: String
+  amount: Int
+  price: Float
+  total: Float
+}
+
+type RootQuery {
+  users: [User]
+  user(id: ID!): User
+}
+
+type User {
+  id: ID
+  username: String
+  email: String
+  password: String
+  orders: [Order]
+}

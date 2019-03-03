@@ -1,0 +1,29 @@
+{
+  "name": "eshop-graphql",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "schema": "node updateSchema.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andreisbitnev47/eshop-graphql.git"
+  },
+  "dependencies": {
+    "bcrypt": "^3.0.4",
+    "body-parser": "^1.18.2",
+    "dotenv-safe": "3.0.0",
+    "express": "^4.16.3",
+    "express-graphql": "^0.6.12",
+    "graphql": "^0.13.2",
+    "mongoose": "^5.0.13"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/andreisbitnev47/eshop-graphql/issues"
+  },
+  "homepage": "https://github.com/andreisbitnev47/eshop-graphql#readme"
+}
