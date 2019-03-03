@@ -2,6 +2,7 @@ const graphql = require('graphql');
 const {
   GraphQLSchema,
   GraphQLObjectType,
+  GraphQLInputObjectType,
   GraphQLList,
   GraphQLID,
   GraphQLString,
@@ -74,23 +75,24 @@ function getProductType() {
         title: {
           type: GraphQLString,
           args: { language: { type: new GraphQLNonNull(GraphQLString) } },
-          resolve: (obj) => obj.title[language]
+          resolve: (obj, { language }) => obj.title[language]
         },
         descriptionShort: {
           type: GraphQLString,
           args: { language: { type: new GraphQLNonNull(GraphQLString) } },
-          resolve: (obj) => obj.title[language]
+          resolve: (obj, { language }) => obj.title[language]
         },
         descriptionLong: {
           type: GraphQLString,
           args: { language: { type: new GraphQLNonNull(GraphQLString) } },
-          resolve: (obj) => obj.title[language]
+          resolve: (obj, { language }) => obj.title[language]
         },
         weight: { type: GraphQLInt },
         amount: { type: GraphQLInt },
         available: { type: GraphQLBoolean },
         imgSmall: { type: new GraphQLList(GraphQLString) },
         imgBig: { type: new GraphQLList(GraphQLString) },
+        price: { type: GraphQLFloat },
       })
   });
 }
@@ -116,6 +118,21 @@ const RootQueryType = new GraphQLObjectType({
       resolve( parentValue, { id }) {
           return User.findById(id);
       }
+    },
+    products: {
+      type: new GraphQLList(ProductType),
+      resolve() {
+          return Product.find({});
+      }
+    },
+    product: {
+      type: ProductType,
+      args: {
+          id: { type: new GraphQLNonNull(GraphQLID) }
+      },
+      resolve( parentValue, { id }) {
+          return Product.findById(id);
+      }
     }
   })
 });
@@ -124,17 +141,59 @@ const mutation = new GraphQLObjectType({
     name: 'Mutation',
     fields: {
         addUser: {
-            type: UserType,
-            args: {
-                username: { type: new GraphQLNonNull(GraphQLString) },
-                email: { type: new GraphQLNonNull(GraphQLString)},
-                password: { type: new GraphQLNonNull(GraphQLString)},
-            },
-            resolve(parentValue, { username, email, password }) {
-              bcrypt.hash(password, saltRounds, (err, hash) => {
-                new User({ username, email, password: hash }).save();
-              });
-            }
+          type: UserType,
+          args: {
+              username: { type: new GraphQLNonNull(GraphQLString) },
+              email: { type: new GraphQLNonNull(GraphQLString)},
+              password: { type: new GraphQLNonNull(GraphQLString)},
+          },
+          resolve(parentValue, { username, email, password }) {
+            bcrypt.hash(password, saltRounds, (err, hash) => {
+              new User({ username, email, password: hash }).save();
+            });
+          }
+        },
+        addProduct: {
+          type: ProductType,
+          args: {
+              title: { type: new GraphQLInputObjectType({
+                name: 'productTitle',
+                fields: {
+                  en: { type: new GraphQLNonNull(GraphQLString) },
+                  rus: { type: GraphQLString },
+                  est: { type: GraphQLString },
+                }
+              }) },
+              descriptionShort: { type: new GraphQLInputObjectType({
+                name: 'productDescriptionShort',
+                fields: {
+                  en: { type: new GraphQLNonNull(GraphQLString) },
+                  rus: { type: GraphQLString },
+                  est: { type: GraphQLString },
+                }
+              }) },
+              descriptionLong: { type: new GraphQLInputObjectType({
+                name: 'productDescriptionLong',
+                fields: {
+                  en: { type: new GraphQLNonNull(GraphQLString) },
+                  rus: { type: GraphQLString },
+                  est: { type: GraphQLString },
+                }
+              }) },
+              weight: { type: GraphQLInt},
+              amount: { type: GraphQLInt},
+              available: { type: GraphQLBoolean},
+              imgSmall: { type: new GraphQLList(GraphQLString)},
+              imgBig: { type: new GraphQLList(GraphQLString)},
+              price: { type: new GraphQLNonNull(GraphQLFloat)},
+          },
+          resolve(parentValue, args) {
+            const dbArgs = {};
+            Object.keys(args).forEach((key) => {
+              dbArgs[key] = args[key];
+            });
+            new Product(dbArgs).save();
+          }
         },
         // addActor: {
         //     type: ActorType,

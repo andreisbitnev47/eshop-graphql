@@ -5,6 +5,7 @@ schema {
 
 type Mutation {
   addUser(username: String!, email: String!, password: String!): User
+  addProduct(title: productTitle, descriptionShort: productDescriptionShort, descriptionLong: productDescriptionLong, weight: Int, amount: Int, available: Boolean, imgSmall: [String], imgBig: [String], price: Float!): Product
 }
 
 type Order {
@@ -23,9 +24,42 @@ type orderProducts {
   total: Float
 }
 
+type Product {
+  id: ID
+  title(language: String!): String
+  descriptionShort(language: String!): String
+  descriptionLong(language: String!): String
+  weight: Int
+  amount: Int
+  available: Boolean
+  imgSmall: [String]
+  imgBig: [String]
+  price: Float
+}
+
+input productDescriptionLong {
+  en: String!
+  rus: String
+  est: String
+}
+
+input productDescriptionShort {
+  en: String!
+  rus: String
+  est: String
+}
+
+input productTitle {
+  en: String!
+  rus: String
+  est: String
+}
+
 type RootQuery {
   users: [User]
   user(id: ID!): User
+  products: [Product]
+  product(id: ID!): Product
 }
 
 type User {
