@@ -6,7 +6,8 @@ schema {
 type Mutation {
   addUser(username: String!, email: String!, password: String!): NewUser
   addProduct(title: productTitle, descriptionShort: productDescriptionShort, descriptionLong: productDescriptionLong, weight: Int, amount: Int, available: Boolean, imgSmall: [String], imgBig: [String], price: Float!): NewProduct
-  addOrder(total: Float!, totalWithShipping: Float!, shippingCost: Float!, status: OrderStatus!, userId: ID!, orderProducts: [orderAddProducts]!): NewOrder
+  addOrder(total: Float!, totalWithShipping: Float!, shippingCost: Float!, status: OrderStatus!, userId: ID!, orderProducts: [orderProductsInput]!): NewOrder
+  addShippingOption(name: String!, address: [String]!, options: [ShippingProviderOptionsInput]!): NewShippingOption
 }
 
 type NewOrder {
@@ -15,6 +16,10 @@ type NewOrder {
 
 type NewProduct {
   product: Product
+}
+
+type NewShippingOption {
+  shippingOption: ShippingOption
 }
 
 type NewUser {
@@ -28,11 +33,7 @@ type Order {
   shippingCost: Float
   status: String
   products: [OrderProducts]
-}
-
-input orderAddProducts {
-  id: ID!
-  amount: Int!
+  user: UserOfOrder
 }
 
 type OrderProducts {
@@ -41,6 +42,11 @@ type OrderProducts {
   price: Float
   total: Float
   product: OrderProductsProduct
+}
+
+input orderProductsInput {
+  id: ID!
+  amount: Int!
 }
 
 type OrderProductsProduct {
@@ -102,9 +108,36 @@ type RootQuery {
   product(id: ID!): Product
   orders: [Order]
   order(id: ID!): Order
+  shippingOptions: [ShippingOption]
+  shippingOption(id: ID!): ShippingOption
+}
+
+type ShippingOption {
+  id: ID
+  name: String!
+  address: [String]!
+  options: [ShippingProviderOptions]!
+}
+
+type ShippingProviderOptions {
+  name: String!
+  price: Float!
+}
+
+input ShippingProviderOptionsInput {
+  name: String!
+  price: Float!
 }
 
 type User {
+  id: ID
+  username: String
+  email: String
+  password: String
+  orders: [UserOrders]
+}
+
+type UserOfOrder {
   id: ID
   username: String
   email: String
@@ -119,4 +152,5 @@ type UserOrders {
   shippingCost: Float
   status: String
   products: [OrderProducts]
+  user: UserOfOrder
 }
