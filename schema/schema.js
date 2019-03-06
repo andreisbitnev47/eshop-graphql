@@ -9,6 +9,7 @@ const {
   GraphQLNonNull,
   GraphQLBoolean,
   GraphQLInt,
+  GraphQLEnumType,
   GraphQLFloat } = graphql;
 const User = require('../models/user');
 const Order = require('../models/order');
@@ -16,16 +17,16 @@ const Product = require('../models/product');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 
-function getUserType() {
+function getUserType(name) {
   return new GraphQLObjectType({
-      name: 'User',
+      name,
       fields: () => ({
           id: { type: GraphQLID },
           username: { type: GraphQLString },
           email: { type: GraphQLString },
           password: { type: GraphQLString },
           orders: {
-              type: new GraphQLList(getOrderType()),
+              type: new GraphQLList(getOrderType('UserOrders')),
               resolve(parentValue) {
                   const orderIds = parentValue.orders.map((order) => {
                       return order.id.toString('hex')
@@ -37,39 +38,42 @@ function getUserType() {
   });
 }
 
-function getOrderType() {
+const OrderProducts = new GraphQLObjectType({
+  name: 'OrderProducts',
+  fields: {
+    title: { type: GraphQLString },
+    amount: { type: GraphQLInt },
+    price: { type: GraphQLFloat },
+    total: { type: GraphQLFloat },
+    product: { type: getProductType('OrderProductsProduct')}
+  }
+});
+
+function getOrderType(name) {
   return new GraphQLObjectType({
-      name: 'Order',
-      fields: () => ({
-          id: { type: GraphQLID },
-          total: { type: GraphQLFloat },
-          totalWithShipping: { type: GraphQLFloat },
-          shippingCost: { type: GraphQLFloat },
-          status: { type: GraphQLString },
-          products: { type: new GraphQLList( new GraphQLObjectType({
-            name: 'orderProducts',
-            fields: {
-              title: { type: GraphQLString },
-              amount: { type: GraphQLInt },
-              price: { type: GraphQLFloat },
-              total: { type: GraphQLFloat },
-            }
-          })),
-          user: {
-            type: getUserType(),
-            resolve(parentValue) {
-                const userId = parentValue.user.id.toString('hex');
-                return Order.findById(userId);
-            }
+    name,
+    fields: () => ({
+        id: { type: GraphQLID },
+        total: { type: GraphQLFloat },
+        totalWithShipping: { type: GraphQLFloat },
+        shippingCost: { type: GraphQLFloat },
+        status: { type: GraphQLString },
+        products: { type: new GraphQLList(OrderProducts),
+        user: {
+          type: getUserType('OrderUser'),
+          resolve(parentValue) {
+              const userId = parentValue.user.id.toString('hex');
+              return Order.findById(userId);
           }
-        },
-      })
+        }
+      },
+    })
   });
 }
 
-function getProductType() {
+function getProductType(name) {
   return new GraphQLObjectType({
-      name: 'Product',
+      name,
       fields: () => ({
         id: { type: GraphQLID },
         title: {
@@ -97,9 +101,9 @@ function getProductType() {
   });
 }
 
-const UserType = getUserType();
-const OrderType = getOrderType();
-const ProductType = getProductType();
+const UserType = getUserType('User');
+const OrderType = getOrderType('Order');
+const ProductType = getProductType('Product');
 
 const RootQueryType = new GraphQLObjectType({
   name: 'RootQuery',
@@ -133,7 +137,22 @@ const RootQueryType = new GraphQLObjectType({
       resolve( parentValue, { id }) {
           return Product.findById(id);
       }
-    }
+    },
+    orders: {
+      type: new GraphQLList(OrderType),
+      resolve() {
+          return Order.find({});
+      }
+    },
+    order: {
+      type: OrderType,
+      args: {
+          id: { type: new GraphQLNonNull(GraphQLID) }
+      },
+      resolve( parentValue, { id }) {
+          return Order.findById(id);
+      }
+    },
   })
 });
 
@@ -141,58 +160,116 @@ const mutation = new GraphQLObjectType({
     name: 'Mutation',
     fields: {
         addUser: {
-          type: UserType,
+          type: new GraphQLObjectType({ name: 'NewUser', fields: { user: { type: UserType } } }),
           args: {
               username: { type: new GraphQLNonNull(GraphQLString) },
               email: { type: new GraphQLNonNull(GraphQLString)},
               password: { type: new GraphQLNonNull(GraphQLString)},
           },
-          resolve(parentValue, { username, email, password }) {
-            bcrypt.hash(password, saltRounds, (err, hash) => {
-              new User({ username, email, password: hash }).save();
+          resolve: (parentValue, { username, email, password }) => {
+            return new Promise((resolve, reject) => {
+              bcrypt.hash(password, saltRounds, (err, hash) => {
+                new User({ username, email, password: hash }).save((err, user) => {
+                  if (err) {
+                    console.log(err)
+                  }
+                  resolve({ user });
+                });
+              });
             });
           }
         },
         addProduct: {
-          type: ProductType,
+          type: new GraphQLObjectType({ name: 'NewProduct', fields: { product: { type: ProductType } } }),
           args: {
-              title: { type: new GraphQLInputObjectType({
-                name: 'productTitle',
-                fields: {
-                  en: { type: new GraphQLNonNull(GraphQLString) },
-                  rus: { type: GraphQLString },
-                  est: { type: GraphQLString },
-                }
-              }) },
-              descriptionShort: { type: new GraphQLInputObjectType({
-                name: 'productDescriptionShort',
-                fields: {
-                  en: { type: new GraphQLNonNull(GraphQLString) },
-                  rus: { type: GraphQLString },
-                  est: { type: GraphQLString },
-                }
-              }) },
-              descriptionLong: { type: new GraphQLInputObjectType({
-                name: 'productDescriptionLong',
-                fields: {
-                  en: { type: new GraphQLNonNull(GraphQLString) },
-                  rus: { type: GraphQLString },
-                  est: { type: GraphQLString },
-                }
-              }) },
-              weight: { type: GraphQLInt},
-              amount: { type: GraphQLInt},
-              available: { type: GraphQLBoolean},
-              imgSmall: { type: new GraphQLList(GraphQLString)},
-              imgBig: { type: new GraphQLList(GraphQLString)},
-              price: { type: new GraphQLNonNull(GraphQLFloat)},
+            title: { type: new GraphQLInputObjectType({
+              name: 'productTitle',
+              fields: {
+                en: { type: new GraphQLNonNull(GraphQLString) },
+                rus: { type: GraphQLString },
+                est: { type: GraphQLString },
+              }
+            }) },
+            descriptionShort: { type: new GraphQLInputObjectType({
+              name: 'productDescriptionShort',
+              fields: {
+                en: { type: new GraphQLNonNull(GraphQLString) },
+                rus: { type: GraphQLString },
+                est: { type: GraphQLString },
+              }
+            }) },
+            descriptionLong: { type: new GraphQLInputObjectType({
+              name: 'productDescriptionLong',
+              fields: {
+                en: { type: new GraphQLNonNull(GraphQLString) },
+                rus: { type: GraphQLString },
+                est: { type: GraphQLString },
+              }
+            }) },
+            weight: { type: GraphQLInt},
+            amount: { type: GraphQLInt},
+            available: { type: GraphQLBoolean},
+            imgSmall: { type: new GraphQLList(GraphQLString)},
+            imgBig: { type: new GraphQLList(GraphQLString)},
+            price: { type: new GraphQLNonNull(GraphQLFloat)},
           },
-          resolve(parentValue, args) {
+          resolve: async (parentValue, args) => {
             const dbArgs = {};
             Object.keys(args).forEach((key) => {
               dbArgs[key] = args[key];
             });
-            new Product(dbArgs).save();
+            const product = await new Product(dbArgs).save();
+            return { product };
+          }
+        },
+        addOrder: {
+          type: new GraphQLObjectType({ name: 'NewOrder', fields: { order: { type: OrderType } } }),
+          args: {
+            total: { type: new GraphQLNonNull(GraphQLFloat)},
+            totalWithShipping: { type: new GraphQLNonNull(GraphQLFloat)},
+            shippingCost: { type: new GraphQLNonNull(GraphQLFloat)},
+            status: { type: new GraphQLNonNull(new GraphQLEnumType({ name: 'OrderStatus', values: { 
+              NEW: { value: 'NEW' },
+              PAID: { value: 'PAID' },
+              SENT: { value: 'SENT' },
+              RECEIVED: { value: 'RECEIVED' },
+              CANCELLED: { value: 'CANCELLED' },
+            }}))},
+            userId: { type: new GraphQLNonNull(GraphQLID) },
+            orderProducts: {
+              type: new GraphQLNonNull(new GraphQLList(new GraphQLInputObjectType({
+                name: 'orderAddProducts',
+                fields: {
+                  id: { type: new GraphQLNonNull(GraphQLID)},
+                  amount: { type: new GraphQLNonNull(GraphQLInt)},
+                }
+              }))),
+            },
+          },
+          resolve: async (parentValue, { total, totalWithShipping, shippingCost, status, userId, orderProducts }) => {
+            const productIds = orderProducts.map(({ id }) => id);
+            const [user, products] = await Promise.all([
+              await User.findById(userId),
+              await Product.find({ _id: { $in: productIds }}),
+            ]);
+            if (user && products && products.length === productIds.length) {
+              const order = await new Order({
+                total, totalWithShipping, shippingCost, status, user,
+                products: products.map(product => {
+                  const amount = orderProducts.find(({ id }) => id === product.id).amount;
+                  const total = amount * product.price;
+                  return {
+                    amount,
+                    total,
+                    product,
+                    title: product.title.en,
+                    price: product.price,
+                  };
+                }),
+              }).save();
+              return { order };
+            }
+            return { order: null };
           }
         },
         // addActor: {

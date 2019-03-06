@@ -4,8 +4,21 @@ schema {
 }
 
 type Mutation {
-  addUser(username: String!, email: String!, password: String!): User
-  addProduct(title: productTitle, descriptionShort: productDescriptionShort, descriptionLong: productDescriptionLong, weight: Int, amount: Int, available: Boolean, imgSmall: [String], imgBig: [String], price: Float!): Product
+  addUser(username: String!, email: String!, password: String!): NewUser
+  addProduct(title: productTitle, descriptionShort: productDescriptionShort, descriptionLong: productDescriptionLong, weight: Int, amount: Int, available: Boolean, imgSmall: [String], imgBig: [String], price: Float!): NewProduct
+  addOrder(total: Float!, totalWithShipping: Float!, shippingCost: Float!, status: OrderStatus!, userId: ID!, orderProducts: [orderAddProducts]!): NewOrder
+}
+
+type NewOrder {
+  order: Order
+}
+
+type NewProduct {
+  product: Product
+}
+
+type NewUser {
+  user: User
 }
 
 type Order {
@@ -14,14 +27,41 @@ type Order {
   totalWithShipping: Float
   shippingCost: Float
   status: String
-  products: [orderProducts]
+  products: [OrderProducts]
 }
 
-type orderProducts {
+input orderAddProducts {
+  id: ID!
+  amount: Int!
+}
+
+type OrderProducts {
   title: String
   amount: Int
   price: Float
   total: Float
+  product: OrderProductsProduct
+}
+
+type OrderProductsProduct {
+  id: ID
+  title(language: String!): String
+  descriptionShort(language: String!): String
+  descriptionLong(language: String!): String
+  weight: Int
+  amount: Int
+  available: Boolean
+  imgSmall: [String]
+  imgBig: [String]
+  price: Float
+}
+
+enum OrderStatus {
+  NEW
+  PAID
+  SENT
+  RECEIVED
+  CANCELLED
 }
 
 type Product {
@@ -60,6 +100,8 @@ type RootQuery {
   user(id: ID!): User
   products: [Product]
   product(id: ID!): Product
+  orders: [Order]
+  order(id: ID!): Order
 }
 
 type User {
@@ -67,5 +109,14 @@ type User {
   username: String
   email: String
   password: String
-  orders: [Order]
+  orders: [UserOrders]
+}
+
+type UserOrders {
+  id: ID
+  total: Float
+  totalWithShipping: Float
+  shippingCost: Float
+  status: String
+  products: [OrderProducts]
 }
