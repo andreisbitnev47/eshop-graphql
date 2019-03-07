@@ -1,4 +1,5 @@
 const graphql = require('graphql');
+const get = require('lodash/get');
 const {
   GraphQLSchema,
   GraphQLObjectType,
@@ -14,7 +15,7 @@ const {
 const User = require('../models/user');
 const Order = require('../models/order');
 const Product = require('../models/product');
-const ShippingOption = require('../models/shippingOption');
+const ShippingProvider = require('../models/shippingProvider');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 
@@ -41,6 +42,7 @@ function getUserType(name) {
   });
 }
 
+const OrderProductsProduct = getProductType('OrderProductsProduct');
 const OrderProducts = new GraphQLObjectType({
   name: 'OrderProducts',
   fields: {
@@ -48,11 +50,26 @@ const OrderProducts = new GraphQLObjectType({
     amount: { type: GraphQLInt },
     price: { type: GraphQLFloat },
     total: { type: GraphQLFloat },
-    product: { type: getProductType('OrderProductsProduct')}
+    product: { type: OrderProductsProduct },
   }
 });
-
 const UserOfOrder = getUserType('UserOfOrder');
+const OrderStatus = new GraphQLEnumType({ name: 'OrderStatus', values: { 
+  NEW: { value: 'NEW' },
+  PAID: { value: 'PAID' },
+  SENT: { value: 'SENT' },
+  RECEIVED: { value: 'RECEIVED' },
+  CANCELLED: { value: 'CANCELLED' },
+}});
+const OrderShippingProvider = new GraphQLObjectType({
+  name: 'OrderShippingProvider',
+  fields: {
+    name: { type: GraphQLString },
+    optionName: { type: GraphQLString },
+    price: { type: GraphQLFloat },
+    shippingProvider: { type: getShippingProviderType('OrderShippingProviderProvider')}
+  }
+})
 function getOrderType(name) {
   return new GraphQLObjectType({
     name,
@@ -60,16 +77,10 @@ function getOrderType(name) {
       id: { type: GraphQLID },
       total: { type: GraphQLFloat },
       totalWithShipping: { type: GraphQLFloat },
-      shippingCost: { type: GraphQLFloat },
       status: { type: GraphQLString },
       products: { type: new GraphQLList(OrderProducts) },
-      user: {
-        type: UserOfOrder,
-        resolve(parentValue) {
-          const userId = parentValue.user.id.toString('hex');
-          return Order.findById(userId);
-        }
-      }
+      user: { type: UserOfOrder },
+      shippingProvider: { type: OrderShippingProvider },
     })
   });
 }
@@ -112,7 +123,7 @@ const ShippingProviderOptions = new GraphQLObjectType({
   }
 });
 
-function getShippingOptionType(name) {
+function getShippingProviderType(name) {
   return new GraphQLObjectType({
     name,
     fields: () => ({
@@ -127,7 +138,7 @@ function getShippingOptionType(name) {
 const UserType = getUserType('User');
 const OrderType = getOrderType('Order');
 const ProductType = getProductType('Product');
-const ShippingOptionType = getShippingOptionType('ShippingOption')
+const ShippingProviderType = getShippingProviderType('ShippingProvider')
 
 const RootQueryType = new GraphQLObjectType({
   name: 'RootQuery',
@@ -177,19 +188,19 @@ const RootQueryType = new GraphQLObjectType({
           return Order.findById(id);
       }
     },
-    shippingOptions: {
-      type: new GraphQLList(ShippingOptionType),
+    ShippingProviders: {
+      type: new GraphQLList(ShippingProviderType),
       resolve() {
-          return ShippingOption.find({});
+          return ShippingProvider.find({});
       }
     },
-    shippingOption: {
-      type: ShippingOptionType,
+    ShippingProvider: {
+      type: ShippingProviderType,
       args: {
           id: { type: new GraphQLNonNull(GraphQLID) }
       },
       resolve( parentValue, { id }) {
-          return ShippingOption.findById(id);
+          return ShippingProvider.findById(id);
       }
     },
   })
@@ -264,17 +275,14 @@ const mutation = new GraphQLObjectType({
     addOrder: {
       type: new GraphQLObjectType({ name: 'NewOrder', fields: { order: { type: OrderType } } }),
       args: {
-        total: { type: new GraphQLNonNull(GraphQLFloat)},
-        totalWithShipping: { type: new GraphQLNonNull(GraphQLFloat)},
-        shippingCost: { type: new GraphQLNonNull(GraphQLFloat)},
-        status: { type: new GraphQLNonNull(new GraphQLEnumType({ name: 'OrderStatus', values: { 
-          NEW: { value: 'NEW' },
-          PAID: { value: 'PAID' },
-          SENT: { value: 'SENT' },
-          RECEIVED: { value: 'RECEIVED' },
-          CANCELLED: { value: 'CANCELLED' },
-        }}))},
+        ShippingProviderId: { type: new GraphQLNonNull(GraphQLID) },
+        //======================
+        // remove thos field in future, resolve with user token
+        //======================
         userId: { type: new GraphQLNonNull(GraphQLID) },
+        //======================
+        // remove thos field in future, resolve with user token
+        //======================
         orderProducts: {
           type: new GraphQLNonNull(new GraphQLList(new GraphQLInputObjectType({
             name: 'orderProductsInput',
@@ -285,16 +293,15 @@ const mutation = new GraphQLObjectType({
           }))),
         },
       },
-      resolve: async (parentValue, { total, totalWithShipping, shippingCost, status, userId, orderProducts }) => {
-        const productIds = orderProducts.map(({ id }) => id);
-        const [user, products] = await Promise.all([
-          await User.findById(userId),
-          await Product.find({ _id: { $in: productIds }}),
-        ]);
-        if (user && products && products.length === productIds.length) {
-          const order = await new Order({
-            total, totalWithShipping, shippingCost, status, user,
-            products: products.map(product => {
+      resolve: async (parentValue, { userId, orderProducts, ShippingProviderId }) => {
+        try {
+          const productIds = orderProducts.map(({ id }) => id);
+          const [user, dbProducts] = await Promise.all([
+            await User.findById(userId),
+            await Product.find({ _id: { $in: productIds }}),
+          ]);
+          if (user && dbProducts && dbProducts.length === productIds.length) {
+            const products = dbProducts.map(product => {
               const amount = orderProducts.find(({ id }) => id === product.id).amount;
               const total = amount * product.price;
               return {
@@ -304,15 +311,33 @@ const mutation = new GraphQLObjectType({
                 title: product.title.en,
                 price: product.price,
               };
-            }),
-          }).save();
-          return { order };
+            })
+            const total = products.reduce((acc, product) => (acc + product.total), 0);
+            const shippingProvider = await ShippingProvider.findById(ShippingProviderId);
+            const cheapestOption = shippingProvider.options.reduce((minOption, option) => (minOption.price < option.price ? minOption : option), shippingProvider.options[0]);
+            const order = await new Order({
+              total,
+              products,
+              user,
+              status: 'NEW',
+              totalWithShipping: total + cheapestOption.price,
+              shippingProvider: {
+                shippingProvider,
+                name: shippingProvider.name,
+                optionName: cheapestOption.name,
+                price: cheapestOption.price,
+              },
+            }).save();
+            return { order };
+          }
+          return { order: null };
+        } catch {
+          return { order: null };
         }
-        return { order: null };
       }
     },
-    addShippingOption: {
-      type: new GraphQLObjectType({ name: 'NewShippingOption', fields: { shippingOption: { type: ShippingOptionType } } }),
+    addShippingProvider: {
+      type: new GraphQLObjectType({ name: 'NewShippingProvider', fields: { ShippingProvider: { type: ShippingProviderType } } }),
       args: {
         name: { type: new GraphQLNonNull(GraphQLString)},
         address: { type: new GraphQLNonNull(new GraphQLList(GraphQLString))},
@@ -325,43 +350,11 @@ const mutation = new GraphQLObjectType({
         })))}
       },
       resolve: async (parentValue, { name, address, options }) => {
-        const shippingOption = await new ShippingOption({ name, address, options}).save();
-        return { shippingOption };
+        const ShippingProvider = await new ShippingProvider({ name, address, options}).save();
+        return { ShippingProvider };
       },
     },
-    // addActor: {
-    //     type: ActorType,
-    //     args: {
-    //         name: { type: new GraphQLNonNull(GraphQLString) },
-    //         age: { type: GraphQLString}
-    //     },
-    //     resolve(parentValue, { name, age }) {
-    //         return (new Actor({ name, age })).save();
-    //     }
-    // },
-    // editMovie: {
-    //     type: MovieType,
-    //     args: {
-    //         id: { type: new GraphQLNonNull(GraphQLID) },
-    //         title: { type: GraphQLString },
-    //         description: { type: GraphQLString }
-    //     },
-    //     resolve(parentValue, { id, title, description }) {
-    //         return ( Movie.findByIdAndUpdate(id, { title, description }, {new: true}, obj => obj))
-    //     }
-    // },
-    // deleteMovie: {
-    //     type: MovieType,
-    //     args: {
-    //         id: { type: new GraphQLNonNull(GraphQLID) }
-    //     },
-    //     resolve(parentValue, { id }) {
-    //         return (Movie.findByIdAndRemove(id, {new: false}, (obj) => {
-    //             return obj;
-    //         }))
-    //     }
-    // }
-    }
+  }
 })
 
 module.exports = new GraphQLSchema({

@@ -6,8 +6,8 @@ schema {
 type Mutation {
   addUser(username: String!, email: String!, password: String!): NewUser
   addProduct(title: productTitle, descriptionShort: productDescriptionShort, descriptionLong: productDescriptionLong, weight: Int, amount: Int, available: Boolean, imgSmall: [String], imgBig: [String], price: Float!): NewProduct
-  addOrder(total: Float!, totalWithShipping: Float!, shippingCost: Float!, status: OrderStatus!, userId: ID!, orderProducts: [orderProductsInput]!): NewOrder
-  addShippingOption(name: String!, address: [String]!, options: [ShippingProviderOptionsInput]!): NewShippingOption
+  addOrder(ShippingProviderId: ID!, userId: ID!, orderProducts: [orderProductsInput]!): NewOrder
+  addShippingProvider(name: String!, address: [String]!, options: [ShippingProviderOptionsInput]!): NewShippingProvider
 }
 
 type NewOrder {
@@ -18,8 +18,8 @@ type NewProduct {
   product: Product
 }
 
-type NewShippingOption {
-  shippingOption: ShippingOption
+type NewShippingProvider {
+  ShippingProvider: ShippingProvider
 }
 
 type NewUser {
@@ -30,10 +30,10 @@ type Order {
   id: ID
   total: Float
   totalWithShipping: Float
-  shippingCost: Float
   status: String
   products: [OrderProducts]
   user: UserOfOrder
+  shippingProvider: OrderShippingProvider
 }
 
 type OrderProducts {
@@ -62,12 +62,18 @@ type OrderProductsProduct {
   price: Float
 }
 
-enum OrderStatus {
-  NEW
-  PAID
-  SENT
-  RECEIVED
-  CANCELLED
+type OrderShippingProvider {
+  name: String
+  optionName: String
+  price: Float
+  shippingProvider: OrderShippingProviderProvider
+}
+
+type OrderShippingProviderProvider {
+  id: ID
+  name: String!
+  address: [String]!
+  options: [ShippingProviderOptions]!
 }
 
 type Product {
@@ -108,11 +114,11 @@ type RootQuery {
   product(id: ID!): Product
   orders: [Order]
   order(id: ID!): Order
-  shippingOptions: [ShippingOption]
-  shippingOption(id: ID!): ShippingOption
+  ShippingProviders: [ShippingProvider]
+  ShippingProvider(id: ID!): ShippingProvider
 }
 
-type ShippingOption {
+type ShippingProvider {
   id: ID
   name: String!
   address: [String]!
@@ -149,8 +155,8 @@ type UserOrders {
   id: ID
   total: Float
   totalWithShipping: Float
-  shippingCost: Float
   status: String
   products: [OrderProducts]
   user: UserOfOrder
+  shippingProvider: OrderShippingProvider
 }

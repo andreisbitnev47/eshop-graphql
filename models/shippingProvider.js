@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
-const ShippingOptionSchema = new Schema({
+const ShippingProviderSchema = new Schema({
     name: { type: String, required: true },
     address: { type: [String] },
     options: { type: [{
@@ -10,4 +10,4 @@ const ShippingOptionSchema = new Schema({
     }]},
 });
 
-module.exports = mongoose.model('ShippingOption', ShippingOptionSchema);
+module.exports = mongoose.model('ShippingProvider', ShippingProviderSchema);
