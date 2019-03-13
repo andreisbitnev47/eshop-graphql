@@ -3,11 +3,79 @@ schema {
   mutation: Mutation
 }
 
+type Content {
+  id: ID
+  key: String!
+  translation(language: String!): String
+}
+
+input contentImgAltInput {
+  en: String
+  est: String
+  rus: String
+}
+
+input contentImgInput {
+  alt: contentImgAltInput
+  url: String
+}
+
+input contentLinkEnInput {
+  url: String
+  anchor: String
+}
+
+input contentLinkEstInput {
+  url: String
+  anchor: String
+}
+
+input contentLinkInput {
+  en: contentLinkEnInput
+  est: contentLinkEstInput
+  rus: contentLinkRusInput
+}
+
+input contentLinkRusInput {
+  url: String
+  anchor: String
+}
+
+input contentParagraphInput {
+  en: String
+  rus: String
+  est: String
+}
+
+input contentSpanInput {
+  en: String
+  rus: String
+  est: String
+}
+
+input contentSubTitleInput {
+  en: String
+  rus: String
+  est: String
+}
+
+input contentTitleInput {
+  en: String
+  rus: String
+  est: String
+}
+
 type Mutation {
   addUser(username: String!, email: String!, password: String!): NewUser
-  addProduct(title: productTitle, descriptionShort: productDescriptionShort, descriptionLong: productDescriptionLong, weight: Int, amount: Int, available: Boolean, imgSmall: [String], imgBig: [String], price: Float!): NewProduct
+  addProduct(title: productTitleInput, descriptionShort: productDescriptionShortInput, descriptionLong: productDescriptionLongInput, weight: Int, amount: Int, available: Boolean, imgSmall: [String], imgBig: [String], price: Float!): NewProduct
   addOrder(ShippingProviderId: ID!, userId: ID!, orderProducts: [orderProductsInput]!): NewOrder
   addShippingProvider(name: String!, address: [String]!, options: [ShippingProviderOptionsInput]!): NewShippingProvider
+  addTranslation(key: String!, en: String!, est: String!, rus: String!): NewTranslation
+  addContent(handle: String!, group: String, title: contentTitleInput, subTitle: contentSubTitleInput, paragraph: contentParagraphInput, span: contentSpanInput, link: contentLinkInput, img: contentImgInput): NewContent
+}
+
+type NewContent {
+  content: Content
 }
 
 type NewOrder {
@@ -20,6 +88,10 @@ type NewProduct {
 
 type NewShippingProvider {
   ShippingProvider: ShippingProvider
+}
+
+type NewTranslation {
+  translation: Translation
 }
 
 type NewUser {
@@ -89,19 +161,19 @@ type Product {
   price: Float
 }
 
-input productDescriptionLong {
+input productDescriptionLongInput {
   en: String!
   rus: String
   est: String
 }
 
-input productDescriptionShort {
+input productDescriptionShortInput {
   en: String!
   rus: String
   est: String
 }
 
-input productTitle {
+input productTitleInput {
   en: String!
   rus: String
   est: String
@@ -116,6 +188,14 @@ type RootQuery {
   order(id: ID!): Order
   ShippingProviders: [ShippingProvider]
   ShippingProvider(id: ID!): ShippingProvider
+  translations: [Translation]
+  translation(id: ID!): Translation
+  translationByKey(key: String!): Translation
+  contents: [Content]
+  content(id: ID!): Content
+  contnetByHandle(handle: String!): Content
+  contnetsByGroup(group: String!): Content
+  images: [String]
 }
 
 type ShippingProvider {
@@ -133,6 +213,12 @@ type ShippingProviderOptions {
 input ShippingProviderOptionsInput {
   name: String!
   price: Float!
+}
+
+type Translation {
+  id: ID
+  key: String!
+  translation(language: String!): String
 }
 
 type User {

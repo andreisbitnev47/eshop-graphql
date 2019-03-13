@@ -1,5 +1,6 @@
 const graphql = require('graphql');
 const get = require('lodash/get');
+const fs = require('fs');
 const {
   GraphQLSchema,
   GraphQLObjectType,
@@ -15,6 +16,8 @@ const {
 const User = require('../models/user');
 const Order = require('../models/order');
 const Product = require('../models/product');
+const Translation = require('../models/translation');
+const Content = require('../models/content');
 const ShippingProvider = require('../models/shippingProvider');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
@@ -69,7 +72,7 @@ const OrderShippingProvider = new GraphQLObjectType({
     price: { type: GraphQLFloat },
     shippingProvider: { type: getShippingProviderType('OrderShippingProviderProvider')}
   }
-})
+});
 function getOrderType(name) {
   return new GraphQLObjectType({
     name,
@@ -135,10 +138,82 @@ function getShippingProviderType(name) {
   });
 }
 
+function getTranslationType(name) {
+  return new GraphQLObjectType({
+    name,
+    fields: () => ({
+      id: { type: GraphQLID },
+      key: { type: new GraphQLNonNull(GraphQLString)},
+      translation: {
+        type: GraphQLString,
+        args: { language: { type: new GraphQLNonNull(GraphQLString) } },
+        resolve: (obj, { language }) => obj[language]
+      },
+    })
+  });
+}
+
+const ContentLink = new GraphQLObjectType({
+  name: 'ContentLink',
+  fields: {
+    url: { type: GraphQLString },
+    anchor: { type: GraphQLString },
+  },
+});
+const ContentImg = new GraphQLObjectType({
+  name: 'ContentImg',
+  fields: {
+    alt: { type: GraphQLString },
+    url: { type: GraphQLString },
+  },
+});
+function getContentType(name) {
+  return new GraphQLObjectType({
+    name,
+    fields: () => ({
+      id: { type: GraphQLID },
+      handle: { type: new GraphQLNonNull(GraphQLString)},
+      group: { type: GraphQLString},
+      title: {
+        type: new GraphQLList(GraphQLString),
+        args: { language: { type: new GraphQLNonNull(GraphQLString) } },
+        resolve: (obj, { language }) => obj.title[language]
+      },
+      subTitle: {
+        type: new GraphQLList(GraphQLString),
+        args: { language: { type: new GraphQLNonNull(GraphQLString) } },
+        resolve: (obj, { language }) => obj.subTitle[language]
+      },
+      paragraph: {
+        type: new GraphQLList(GraphQLString),
+        args: { language: { type: new GraphQLNonNull(GraphQLString) } },
+        resolve: (obj, { language }) => obj.paragraph[language]
+      },
+      span: {
+        type: new GraphQLList(GraphQLString),
+        args: { language: { type: new GraphQLNonNull(GraphQLString) } },
+        resolve: (obj, { language }) => obj.span[language]
+      },
+      link: {
+        type: new GraphQLList(ContentLink),
+        args: { language: { type: new GraphQLNonNull(GraphQLString) } },
+        resolve: (obj, { language }) => obj.link[language],
+      },
+      img: {
+        type: GraphQLString,
+        args: { language: { type: new GraphQLNonNull(GraphQLString) } },
+        resolve: (obj, { language }) => ({ alt: obj.img.alt[language], url: obj.url })
+      },
+    })
+  });
+}
+
 const UserType = getUserType('User');
 const OrderType = getOrderType('Order');
 const ProductType = getProductType('Product');
-const ShippingProviderType = getShippingProviderType('ShippingProvider')
+const ShippingProviderType = getShippingProviderType('ShippingProvider');
+const TranslationType = getTranslationType('Translation');
+const ContentType = getContentType('Content');
 
 const RootQueryType = new GraphQLObjectType({
   name: 'RootQuery',
@@ -203,6 +278,78 @@ const RootQueryType = new GraphQLObjectType({
           return ShippingProvider.findById(id);
       }
     },
+    translations: {
+      type: new GraphQLList(TranslationType),
+      resolve() {
+          return Translation.find({});
+      }
+    },
+    translation: {
+      type: TranslationType,
+      args: {
+          id: { type: new GraphQLNonNull(GraphQLID) }
+      },
+      resolve( parentValue, { id }) {
+          return Translation.findById(id);
+      }
+    },
+    translationByKey: {
+      type: TranslationType,
+      args: {
+          key: { type: new GraphQLNonNull(GraphQLString) }
+      },
+      resolve( parentValue, { key }) {
+          return Translation.findOne({ key });
+      }
+    },
+    contents: {
+      type: new GraphQLList(ContentType),
+      resolve() {
+          return Content.find({});
+      }
+    },
+    content: {
+      type: ContentType,
+      args: {
+          id: { type: new GraphQLNonNull(GraphQLID) }
+      },
+      resolve( parentValue, { id }) {
+          return Content.findById(id);
+      }
+    },
+    contnetByHandle: {
+      type: ContentType,
+      args: {
+          handle: { type: new GraphQLNonNull(GraphQLString) }
+      },
+      resolve( parentValue, { handle }) {
+          return Translation.findOne({ handle });
+      }
+    },
+    contnetsByGroup: {
+      type: ContentType,
+      args: {
+          group: { type: new GraphQLNonNull(GraphQLString) }
+      },
+      resolve( parentValue, { group }) {
+          return Translation.find({ group });
+      }
+    },
+    images: {
+      type: new GraphQLList(GraphQLString),
+      resolve() {
+        return new Promise((resolve, reject) => {
+          fs.readdir('./images', (err, files) => {
+            if (err) {
+              console.log(err);
+              resolve([]);
+            } else {
+              resolve(files.map(fileName => `/images/${fileName}`));
+            }
+          });
+        });
+      }
+    },
   })
 });
 
@@ -233,7 +380,7 @@ const mutation = new GraphQLObjectType({
       type: new GraphQLObjectType({ name: 'NewProduct', fields: { product: { type: ProductType } } }),
       args: {
         title: { type: new GraphQLInputObjectType({
-          name: 'productTitle',
+          name: 'productTitleInput',
           fields: {
             en: { type: new GraphQLNonNull(GraphQLString) },
             rus: { type: GraphQLString },
@@ -241,7 +388,7 @@ const mutation = new GraphQLObjectType({
           }
         }) },
         descriptionShort: { type: new GraphQLInputObjectType({
-          name: 'productDescriptionShort',
+          name: 'productDescriptionShortInput',
           fields: {
             en: { type: new GraphQLNonNull(GraphQLString) },
             rus: { type: GraphQLString },
@@ -249,7 +396,7 @@ const mutation = new GraphQLObjectType({
           }
         }) },
         descriptionLong: { type: new GraphQLInputObjectType({
-          name: 'productDescriptionLong',
+          name: 'productDescriptionLongInput',
           fields: {
             en: { type: new GraphQLNonNull(GraphQLString) },
             rus: { type: GraphQLString },
@@ -353,6 +500,106 @@ const mutation = new GraphQLObjectType({
         const ShippingProvider = await new ShippingProvider({ name, address, options}).save();
         return { ShippingProvider };
       },
+    },
+    addTranslation: {
+      type: new GraphQLObjectType({ name: 'NewTranslation', fields: { translation: { type: TranslationType } } }),
+      args: {
+          key: { type: new GraphQLNonNull(GraphQLString) },
+          en: { type: new GraphQLNonNull(GraphQLString)},
+          est: { type: new GraphQLNonNull(GraphQLString)},
+          rus: { type: new GraphQLNonNull(GraphQLString)},
+      },
+      resolve: async (parentValue, { key, en, est, rus }) => {
+        const translation = await new Translation({ key, en, est, rus }).save();
+        return { translation };
+      }
+    },
+    addContent: {
+      type: new GraphQLObjectType({ name: 'NewContent', fields: { content: { type: ContentType } } }),
+      args: {
+        handle: { type: new GraphQLNonNull(GraphQLString) },
+        group: { type: GraphQLString },
+        title: { type: new GraphQLInputObjectType({
+          name: 'contentTitleInput',
+          fields: {
+            en: { type: GraphQLString },
+            rus: { type: GraphQLString },
+            est: { type: GraphQLString },
+          }
+        }) },
+        subTitle: { type: new GraphQLInputObjectType({
+          name: 'contentSubTitleInput',
+          fields: {
+            en: { type: GraphQLString },
+            rus: { type: GraphQLString },
+            est: { type: GraphQLString },
+          }
+        }) },
+        paragraph: { type: new GraphQLInputObjectType({
+          name: 'contentParagraphInput',
+          fields: {
+            en: { type: GraphQLString },
+            rus: { type: GraphQLString },
+            est: { type: GraphQLString },
+          }
+        }) },
+        span: { type: new GraphQLInputObjectType({
+          name: 'contentSpanInput',
+          fields: {
+            en: { type: GraphQLString },
+            rus: { type: GraphQLString },
+            est: { type: GraphQLString },
+          }
+        }) },
+        link: { type: new GraphQLInputObjectType({
+          name: 'contentLinkInput',
+          fields: {
+            en: { type: new GraphQLInputObjectType({
+              name: 'contentLinkEnInput',
+              fields: {
+                url: { type: GraphQLString },
+                anchor: { type: GraphQLString },
+              }
+            }) },
+            est: { type: new GraphQLInputObjectType({
+              name: 'contentLinkEstInput',
+              fields: {
+                url: { type: GraphQLString },
+                anchor: { type: GraphQLString },
+              }
+            }) },
+            rus: { type: new GraphQLInputObjectType({
+              name: 'contentLinkRusInput',
+              fields: {
+                url: { type: GraphQLString },
+                anchor: { type: GraphQLString },
+              }
+            }) },
+          }
+        }) },
+        img: { type: new GraphQLInputObjectType({
+          name: 'contentImgInput',
+          fields: {
+            alt: { type: new GraphQLInputObjectType({
+              name: 'contentImgAltInput',
+              fields: {
+                en: { type: GraphQLString },
+                est: { type: GraphQLString },
+                rus: { type: GraphQLString },
+              }
+            }) },
+            url: { type: GraphQLString },
+          }
+        }) },
+      },
+      resolve: async (parentValue, args) => {
+        const dbArgs = {};
+        Object.keys(args).forEach((key) => {
+          dbArgs[key] = args[key];
+        });
+        const content = await new Content(dbArgs).save();
+        return { content };
+      }
     },
   }
 })
