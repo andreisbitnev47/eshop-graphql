@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const schema = require('./schema/schema');
 const fileUpload = require('express-fileupload');
+const get = require('lodash/get');
 require('dotenv-safe').config();
 
 const app = express();
@@ -13,10 +14,11 @@ mongoose.connect(process.env.MONGO_URL);
 
 app.use(fileUpload());
 app.use(bodyParser.json());
-app.use('/graphql', expressGraphQL({
+app.use('/graphql', expressGraphQL(request => ({
   schema,
-  graphiql: true
-}));
+  graphiql: true,
+  context: { token: get(request, 'headers.authorization', 'Bearer ').split('Bearer ')[1] }
+})));
 
 app.use('/images', express.static('images'));
 

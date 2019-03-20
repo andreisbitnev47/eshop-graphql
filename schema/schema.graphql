@@ -5,8 +5,19 @@ schema {
 
 type Content {
   id: ID
-  key: String!
-  translation(language: String!): String
+  handle: String!
+  group: String
+  title(language: String!): [String]
+  subTitle(language: String!): [String]
+  paragraph(language: String!): [String]
+  span(language: String!): [String]
+  link(language: String!): [ContentLink]
+  img(language: String!): [ContentImg]
+}
+
+type ContentImg {
+  alt: String
+  url: String
 }
 
 input contentImgAltInput {
@@ -18,6 +29,11 @@ input contentImgAltInput {
 input contentImgInput {
   alt: contentImgAltInput
   url: String
+}
+
+type ContentLink {
+  url: String
+  anchor: String
 }
 
 input contentLinkEnInput {
@@ -65,13 +81,18 @@ input contentTitleInput {
   est: String
 }
 
+type Login {
+  token: String
+}
+
 type Mutation {
-  addUser(username: String!, email: String!, password: String!): NewUser
+  addUser(username: String!, email: String!, password: String!, role: String!): NewUser
+  login(username: String!, password: String!): Login
   addProduct(title: productTitleInput, descriptionShort: productDescriptionShortInput, descriptionLong: productDescriptionLongInput, weight: Int, amount: Int, available: Boolean, imgSmall: [String], imgBig: [String], price: Float!): NewProduct
-  addOrder(ShippingProviderId: ID!, userId: ID!, orderProducts: [orderProductsInput]!): NewOrder
+  addOrder(ShippingProviderId: ID!, email: String!, orderProducts: [orderProductsInput]!): NewOrder
   addShippingProvider(name: String!, address: [String]!, options: [ShippingProviderOptionsInput]!): NewShippingProvider
   addTranslation(key: String!, en: String!, est: String!, rus: String!): NewTranslation
-  addContent(handle: String!, group: String, title: contentTitleInput, subTitle: contentSubTitleInput, paragraph: contentParagraphInput, span: contentSpanInput, link: contentLinkInput, img: contentImgInput): NewContent
+  addContent(handle: String!, group: String, title: [contentTitleInput], subTitle: [contentSubTitleInput], paragraph: [contentParagraphInput], span: [contentSpanInput], link: [contentLinkInput], img: [contentImgInput]): NewContent
 }
 
 type NewContent {
@@ -87,7 +108,7 @@ type NewProduct {
 }
 
 type NewShippingProvider {
-  ShippingProvider: ShippingProvider
+  shippingProvider: ShippingProvider
 }
 
 type NewTranslation {
@@ -194,7 +215,7 @@ type RootQuery {
   contents: [Content]
   content(id: ID!): Content
   contnetByHandle(handle: String!): Content
-  contnetsByGroup(group: String!): Content
+  contnetsByGroup(group: String!): [Content]
   images: [String]
 }
 

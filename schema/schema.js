@@ -22,6 +22,48 @@ const ShippingProvider = require('../models/shippingProvider');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 
+const jwt = require('jsonwebtoken');
+
+function getToken(username, password, role) {
+  return new Promise((resolve, reject) => {
+    jwt.sign({ username, password, role }, process.env.SECRET, (err, token) => {
+      if(!err) {
+        resolve(token);
+      }
+    });
+  })
+}
+
+function checkToken(token) {
+  return new Promise((resolve, reject) => {
+    jwt.verify(token, process.env.SECRET, (err, decoded) => {
+      resolve(decoded)
+    });
+  })
+}
+
+async function verifyRole(token, role, callback, rootValue) {
+  const user = await checkToken(token);
+  if (get(user, 'role') === role) {
+    return callback();
+  } else {
+    console.log('Unauthorized');
+    return rootValue ? { rootValue: null } : null
+  }
+}
+
+function createNewUser(username, email, password, role) {
+  return () => new Promise((resolve, reject) => {
+    bcrypt.hash(password, saltRounds, (err, hash) => {
+      new User({ username, email, password: hash, role }).save((err, user) => {
+        if (err) {
+          console.log(err)
+        }
+        resolve({ user });
+      });
+    });
+  });
+}
 
 const UserOrders = getOrderType('UserOrders');
 function getUserType(name) {
@@ -177,32 +219,32 @@ function getContentType(name) {
       title: {
         type: new GraphQLList(GraphQLString),
         args: { language: { type: new GraphQLNonNull(GraphQLString) } },
-        resolve: (obj, { language }) => obj.title[language]
+        resolve: (obj, { language }) => obj.title.map(instance => instance[language]),
       },
       subTitle: {
         type: new GraphQLList(GraphQLString),
         args: { language: { type: new GraphQLNonNull(GraphQLString) } },
-        resolve: (obj, { language }) => obj.subTitle[language]
+        resolve: (obj, { language }) => obj.subTitle.map(instance => instance[language]),
       },
       paragraph: {
         type: new GraphQLList(GraphQLString),
         args: { language: { type: new GraphQLNonNull(GraphQLString) } },
-        resolve: (obj, { language }) => obj.paragraph[language]
+        resolve: (obj, { language }) => obj.paragraph.map(instance => instance[language]),
       },
       span: {
         type: new GraphQLList(GraphQLString),
         args: { language: { type: new GraphQLNonNull(GraphQLString) } },
-        resolve: (obj, { language }) => obj.span[language]
+        resolve: (obj, { language }) => obj.span.map(instance => instance[language]),
       },
       link: {
         type: new GraphQLList(ContentLink),
         args: { language: { type: new GraphQLNonNull(GraphQLString) } },
-        resolve: (obj, { language }) => obj.link[language],
+        resolve: (obj, { language }) => obj.link.map(instance => instance[language]),
       },
       img: {
-        type: GraphQLString,
+        type: new GraphQLList(ContentImg),
         args: { language: { type: new GraphQLNonNull(GraphQLString) } },
-        resolve: (obj, { language }) => ({ alt: obj.img.alt[language], url: obj.url })
+        resolve: (obj, { language }) => (obj.img.map(image => ({ alt: image.alt[language], url: image.url })))
       },
     })
   });
@@ -220,8 +262,9 @@ const RootQueryType = new GraphQLObjectType({
   fields: () => ({
     users: {
       type: new GraphQLList(UserType),
-      resolve() {
-          return User.find({});
+      resolve: async (parentValue, args, context) => {
+        const callback = () => User.find({});
+        return verifyRole(context.token, 'admin', callback, null);
       }
     },
     user: {
@@ -229,14 +272,15 @@ const RootQueryType = new GraphQLObjectType({
       args: {
           id: { type: new GraphQLNonNull(GraphQLID) }
       },
-      resolve( parentValue, { id }) {
-          return User.findById(id);
+      resolve(parentValue, { id }, context) {
+        const callback = () => User.findById(id);
+        return verifyRole(context.token, 'admin', callback, null);
       }
     },
     products: {
       type: new GraphQLList(ProductType),
       resolve() {
-          return Product.find({});
+        return Product.find({});
       }
     },
     product: {
@@ -250,8 +294,9 @@ const RootQueryType = new GraphQLObjectType({
     },
     orders: {
       type: new GraphQLList(OrderType),
-      resolve() {
-          return Order.find({});
+      resolve(parentValue, args, context) {
+        const callback = () => Order.find({});
+        return verifyRole(context.token, 'admin', callback, null);
       }
     },
     order: {
@@ -259,8 +304,9 @@ const RootQueryType = new GraphQLObjectType({
       args: {
           id: { type: new GraphQLNonNull(GraphQLID) }
       },
-      resolve( parentValue, { id }) {
-          return Order.findById(id);
+      resolve(parentValue, { id }, context) {
+        const callback = () => Order.findById(id);
+        return verifyRole(context.token, 'admin', callback, null);
       }
     },
     ShippingProviders: {
@@ -274,7 +320,7 @@ const RootQueryType = new GraphQLObjectType({
       args: {
           id: { type: new GraphQLNonNull(GraphQLID) }
       },
-      resolve( parentValue, { id }) {
+      resolve(parentValue, { id }) {
           return ShippingProvider.findById(id);
       }
     },
@@ -289,7 +335,7 @@ const RootQueryType = new GraphQLObjectType({
       args: {
           id: { type: new GraphQLNonNull(GraphQLID) }
       },
-      resolve( parentValue, { id }) {
+      resolve(parentValue, { id }) {
           return Translation.findById(id);
       }
     },
@@ -298,14 +344,14 @@ const RootQueryType = new GraphQLObjectType({
       args: {
           key: { type: new GraphQLNonNull(GraphQLString) }
       },
-      resolve( parentValue, { key }) {
+      resolve(parentValue, { key }) {
           return Translation.findOne({ key });
       }
     },
     contents: {
       type: new GraphQLList(ContentType),
       resolve() {
-          return Content.find({});
+        return Content.find({});
       }
     },
     content: {
@@ -313,8 +359,8 @@ const RootQueryType = new GraphQLObjectType({
       args: {
           id: { type: new GraphQLNonNull(GraphQLID) }
       },
-      resolve( parentValue, { id }) {
-          return Content.findById(id);
+      resolve(parentValue, { id }) {
+        return Content.findById(id);
       }
     },
     contnetByHandle: {
@@ -322,23 +368,23 @@ const RootQueryType = new GraphQLObjectType({
       args: {
           handle: { type: new GraphQLNonNull(GraphQLString) }
       },
-      resolve( parentValue, { handle }) {
-          return Translation.findOne({ handle });
+      resolve(parentValue, { handle }) {
+        return Content.findOne({ handle });
       }
     },
     contnetsByGroup: {
-      type: ContentType,
+      type: new GraphQLList(ContentType),
       args: {
           group: { type: new GraphQLNonNull(GraphQLString) }
       },
-      resolve( parentValue, { group }) {
-          return Translation.find({ group });
+      resolve(parentValue, { group }) {
+        return Content.find({ group });
       }
     },
     images: {
       type: new GraphQLList(GraphQLString),
-      resolve() {
-        return new Promise((resolve, reject) => {
+      resolve(parentValue, args, context) {
+        const callback = () => new Promise((resolve, reject) => {
           fs.readdir('./images', (err, files) => {
             if (err) {
               console.log(err);
@@ -348,6 +394,7 @@ const RootQueryType = new GraphQLObjectType({
             }
           });
         });
+        return verifyRole(context.token, 'admin', callback, null);
       }
     },
   })
@@ -359,19 +406,39 @@ const mutation = new GraphQLObjectType({
     addUser: {
       type: new GraphQLObjectType({ name: 'NewUser', fields: { user: { type: UserType } } }),
       args: {
-          username: { type: new GraphQLNonNull(GraphQLString) },
-          email: { type: new GraphQLNonNull(GraphQLString)},
-          password: { type: new GraphQLNonNull(GraphQLString)},
+        username: { type: new GraphQLNonNull(GraphQLString) },
+        email: { type: new GraphQLNonNull(GraphQLString)},
+        password: { type: new GraphQLNonNull(GraphQLString)},
+        role: { type: new GraphQLNonNull(GraphQLString)},
       },
-      resolve: (parentValue, { username, email, password }) => {
-        return new Promise((resolve, reject) => {
-          bcrypt.hash(password, saltRounds, (err, hash) => {
-            new User({ username, email, password: hash }).save((err, user) => {
+      resolve: (parentValue, { username, email, password }, context) => {
+        const callback = () => new Promise((resolve, reject) => {
+          bcrypt.hash(process.env.DEFAULT_PASSWORD, saltRounds, (err, hash) => {
+            new User({ email, email, password: hash, role }).save((err, user) => {
               if (err) {
                 console.log(err)
               }
               resolve({ user });
             });
+          });
+        });
+        return verifyRole(context.token, 'admin', callback, 'user');
+      }
+    },
+    login: {
+      type: new GraphQLObjectType({ name: 'Login', fields: { token: { type: GraphQLString } } }),
+      args: {
+        username: { type: new GraphQLNonNull(GraphQLString) },
+        password: { type: new GraphQLNonNull(GraphQLString)},
+      },
+      resolve: (parentValue, { username, password }) => {
+        return new Promise(async (resolve, reject) => {
+          const user = await User.findOne({ username });
+          bcrypt.compare(password, user.password, async (err, res) => {
+            if (res) {
+              const token = await getToken(username, password, user.role)
+              resolve({token})
+            }
           });
         });
       }
@@ -410,26 +477,23 @@ const mutation = new GraphQLObjectType({
         imgBig: { type: new GraphQLList(GraphQLString)},
         price: { type: new GraphQLNonNull(GraphQLFloat)},
       },
-      resolve: async (parentValue, args) => {
+      resolve: async (parentValue, args, context) => {
         const dbArgs = {};
         Object.keys(args).forEach((key) => {
           dbArgs[key] = args[key];
         });
-        const product = await new Product(dbArgs).save();
-        return { product };
+        const callback = async () => {
+          const product = await new Product(dbArgs).save();
+          return { product };
+        }
+        return verifyRole(context.token, 'admin', callback, 'product');
       }
     },
     addOrder: {
       type: new GraphQLObjectType({ name: 'NewOrder', fields: { order: { type: OrderType } } }),
       args: {
         ShippingProviderId: { type: new GraphQLNonNull(GraphQLID) },
-        //======================
-        // remove thos field in future, resolve with user token
-        //======================
-        userId: { type: new GraphQLNonNull(GraphQLID) },
-        //======================
-        // remove thos field in future, resolve with user token
-        //======================
+        email: { type: new GraphQLNonNull(GraphQLString) },
         orderProducts: {
           type: new GraphQLNonNull(new GraphQLList(new GraphQLInputObjectType({
             name: 'orderProductsInput',
@@ -440,13 +504,25 @@ const mutation = new GraphQLObjectType({
           }))),
         },
       },
-      resolve: async (parentValue, { userId, orderProducts, ShippingProviderId }) => {
+      resolve: async (parentValue, { email, orderProducts, ShippingProviderId }) => {
         try {
           const productIds = orderProducts.map(({ id }) => id);
-          const [user, dbProducts] = await Promise.all([
-            await User.findById(userId),
+          let [user, dbProducts] = await Promise.all([
+            await User.findOne({ email }),
             await Product.find({ _id: { $in: productIds }}),
           ]);
+          if (!user) {
+            user = await new Promise((resolve, reject) => {
+              bcrypt.hash(process.env.DEFAULT_PASSWORD, saltRounds, (err, hash) => {
+                new User({ username: email, email, password: hash, role: 'customer' }).save((err, user) => {
+                  if (err) {
+                    console.log(err)
+                  }
+                  resolve(user);
+                });
+              });
+            });
+          }
           if (user && dbProducts && dbProducts.length === productIds.length) {
             const products = dbProducts.map(product => {
               const amount = orderProducts.find(({ id }) => id === product.id).amount;
@@ -484,7 +560,7 @@ const mutation = new GraphQLObjectType({
       }
     },
     addShippingProvider: {
-      type: new GraphQLObjectType({ name: 'NewShippingProvider', fields: { ShippingProvider: { type: ShippingProviderType } } }),
+      type: new GraphQLObjectType({ name: 'NewShippingProvider', fields: { shippingProvider: { type: ShippingProviderType } } }),
       args: {
         name: { type: new GraphQLNonNull(GraphQLString)},
         address: { type: new GraphQLNonNull(new GraphQLList(GraphQLString))},
@@ -496,9 +572,12 @@ const mutation = new GraphQLObjectType({
           }
         })))}
       },
-      resolve: async (parentValue, { name, address, options }) => {
-        const ShippingProvider = await new ShippingProvider({ name, address, options}).save();
-        return { ShippingProvider };
+      resolve: async (parentValue, { name, address, options }, context) => {
+        const callback = async () => {
+          const shippingProvider = await new ShippingProvider({ name, address, options}).save();
+          return { shippingProvider };
+        }
+        return verifyRole(context.token, 'admin', callback, 'shippingProvider');
       },
     },
     addTranslation: {
@@ -509,9 +588,12 @@ const mutation = new GraphQLObjectType({
           est: { type: new GraphQLNonNull(GraphQLString)},
           rus: { type: new GraphQLNonNull(GraphQLString)},
       },
-      resolve: async (parentValue, { key, en, est, rus }) => {
-        const translation = await new Translation({ key, en, est, rus }).save();
-        return { translation };
+      resolve: async (parentValue, { key, en, est, rus }, context) => {
+        const callback = async () => {
+          const translation = await new Translation({ key, en, est, rus }).save();
+          return { translation };
+        }
+        return verifyRole(context.token, 'admin', callback, 'translation');
       }
     },
     addContent: {
@@ -519,39 +601,39 @@ const mutation = new GraphQLObjectType({
       args: {
         handle: { type: new GraphQLNonNull(GraphQLString) },
         group: { type: GraphQLString },
-        title: { type: new GraphQLInputObjectType({
+        title: { type: new GraphQLList(new GraphQLInputObjectType({
           name: 'contentTitleInput',
           fields: {
             en: { type: GraphQLString },
             rus: { type: GraphQLString },
             est: { type: GraphQLString },
           }
-        }) },
-        subTitle: { type: new GraphQLInputObjectType({
+        })) },
+        subTitle: { type: new GraphQLList(new GraphQLInputObjectType({
           name: 'contentSubTitleInput',
           fields: {
             en: { type: GraphQLString },
             rus: { type: GraphQLString },
             est: { type: GraphQLString },
           }
-        }) },
-        paragraph: { type: new GraphQLInputObjectType({
+        })) },
+        paragraph: { type: new GraphQLList(new GraphQLInputObjectType({
           name: 'contentParagraphInput',
           fields: {
             en: { type: GraphQLString },
             rus: { type: GraphQLString },
             est: { type: GraphQLString },
           }
-        }) },
-        span: { type: new GraphQLInputObjectType({
+        })) },
+        span: { type: new GraphQLList(new GraphQLInputObjectType({
           name: 'contentSpanInput',
           fields: {
             en: { type: GraphQLString },
             rus: { type: GraphQLString },
             est: { type: GraphQLString },
           }
-        }) },
-        link: { type: new GraphQLInputObjectType({
+        })) },
+        link: { type: new GraphQLList(new GraphQLInputObjectType({
           name: 'contentLinkInput',
           fields: {
             en: { type: new GraphQLInputObjectType({
@@ -576,8 +658,8 @@ const mutation = new GraphQLObjectType({
               }
             }) },
           }
-        }) },
-        img: { type: new GraphQLInputObjectType({
+        })) },
+        img: { type: new GraphQLList(new GraphQLInputObjectType({
           name: 'contentImgInput',
           fields: {
             alt: { type: new GraphQLInputObjectType({
@@ -590,15 +672,18 @@ const mutation = new GraphQLObjectType({
             }) },
             url: { type: GraphQLString },
           }
-        }) },
+        })) },
       },
-      resolve: async (parentValue, args) => {
+      resolve: async (parentValue, args, context) => {
         const dbArgs = {};
         Object.keys(args).forEach((key) => {
           dbArgs[key] = args[key];
         });
-        const content = await new Content(dbArgs).save();
-        return { content };
+        const callback = async () => {
+          const content = await new Content(dbArgs).save();
+          return { content };
+        }
+        return verifyRole(context.token, 'admin', callback, 'content');
       }
     },
   }
