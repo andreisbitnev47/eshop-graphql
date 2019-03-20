@@ -7,6 +7,7 @@ const ProductSchema = new Schema({
       rus: { type: String },
       est: { type: String },
     }},
+    handle: { type: String },
     descriptionShort: { type: {
       en: { type: String },
       rus: { type: String },

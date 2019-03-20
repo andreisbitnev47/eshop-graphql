@@ -150,6 +150,7 @@ function getProductType(name) {
         args: { language: { type: new GraphQLNonNull(GraphQLString) } },
         resolve: (obj, { language }) => obj.title[language]
       },
+      handle: { type: GraphQLString },
       weight: { type: GraphQLInt },
       amount: { type: GraphQLInt },
       available: { type: GraphQLBoolean },
@@ -290,6 +291,15 @@ const RootQueryType = new GraphQLObjectType({
       },
       resolve( parentValue, { id }) {
           return Product.findById(id);
+      }
+    },
+    productByHandle: {
+      type: ProductType,
+      args: {
+          handle: { type: new GraphQLNonNull(GraphQLString) }
+      },
+      resolve( parentValue, { handle }) {
+          return Product.findOne({ handle });
       }
     },
     orders: {
@@ -478,7 +488,7 @@ const mutation = new GraphQLObjectType({
         price: { type: new GraphQLNonNull(GraphQLFloat)},
       },
       resolve: async (parentValue, args, context) => {
-        const dbArgs = {};
+        const dbArgs = {handle: args.title.en.toLowerCase().split(' ').join('-')};
         Object.keys(args).forEach((key) => {
           dbArgs[key] = args[key];
         });

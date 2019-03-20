@@ -6,6 +6,7 @@ const bodyParser = require('body-parser');
 const schema = require('./schema/schema');
 const fileUpload = require('express-fileupload');
 const get = require('lodash/get');
+const cors = require('cors')
 require('dotenv-safe').config();
 
 const app = express();
@@ -14,7 +15,7 @@ mongoose.connect(process.env.MONGO_URL);
 
 app.use(fileUpload());
 app.use(bodyParser.json());
-app.use('/graphql', expressGraphQL(request => ({
+app.use('/graphql', cors(), expressGraphQL(request => ({
   schema,
   graphiql: true,
   context: { token: get(request, 'headers.authorization', 'Bearer ').split('Bearer ')[1] }
