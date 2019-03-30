@@ -393,7 +393,7 @@ const RootQueryType = new GraphQLObjectType({
     },
     images: {
       type: new GraphQLList(GraphQLString),
-      resolve(parentValue, args, context) {
+      resolve: async(parentValue, args, context) => {
         const callback = () => new Promise((resolve, reject) => {
           fs.readdir('./images', (err, files) => {
             if (err) {
@@ -444,10 +444,15 @@ const mutation = new GraphQLObjectType({
       resolve: (parentValue, { username, password }) => {
         return new Promise(async (resolve, reject) => {
           const user = await User.findOne({ username });
+          if (!user) {
+            resolve({ token: null});
+          }
           bcrypt.compare(password, user.password, async (err, res) => {
             if (res) {
               const token = await getToken(username, password, user.role)
-              resolve({token})
+              resolve({token});
+            } else {
+              resolve({ token: null});
             }
           });
         });
@@ -457,7 +462,7 @@ const mutation = new GraphQLObjectType({
       type: new GraphQLObjectType({ name: 'NewProduct', fields: { product: { type: ProductType } } }),
       args: {
         title: { type: new GraphQLInputObjectType({
-          name: 'productTitleInput',
+          name: 'productTitleAddInput',
           fields: {
             en: { type: new GraphQLNonNull(GraphQLString) },
             rus: { type: GraphQLString },
@@ -465,7 +470,7 @@ const mutation = new GraphQLObjectType({
           }
         }) },
         descriptionShort: { type: new GraphQLInputObjectType({
-          name: 'productDescriptionShortInput',
+          name: 'productDescriptionShortAddInput',
           fields: {
             en: { type: new GraphQLNonNull(GraphQLString) },
             rus: { type: GraphQLString },
@@ -473,7 +478,7 @@ const mutation = new GraphQLObjectType({
           }
         }) },
         descriptionLong: { type: new GraphQLInputObjectType({
-          name: 'productDescriptionLongInput',
+          name: 'productDescriptionLongAddInput',
           fields: {
             en: { type: new GraphQLNonNull(GraphQLString) },
             rus: { type: GraphQLString },
@@ -494,6 +499,66 @@ const mutation = new GraphQLObjectType({
         });
         const callback = async () => {
           const product = await new Product(dbArgs).save();
+          return { product };
+        }
+        return verifyRole(context.token, 'admin', callback, 'product');
+      }
+    },
+    editProduct: {
+      type: new GraphQLObjectType({ name: 'EditProduct', fields: { product: { type: ProductType } } }),
+      args: {
+        id: {type: new GraphQLNonNull(GraphQLID)},
+        title: { type: new GraphQLInputObjectType({
+          name: 'productTitleEditInput',
+          fields: {
+            en: { type: GraphQLString },
+            rus: { type: GraphQLString },
+            est: { type: GraphQLString },
+          }
+        }) },
+        descriptionShort: { type: new GraphQLInputObjectType({
+          name: 'productDescriptionShortEditInput',
+          fields: {
+            en: { type: GraphQLString },
+            rus: { type: GraphQLString },
+            est: { type: GraphQLString },
+          }
+        }) },
+        descriptionLong: { type: new GraphQLInputObjectType({
+          name: 'productDescriptionLongEditInput',
+          fields: {
+            en: { type: GraphQLString },
+            rus: { type: GraphQLString },
+            est: { type: GraphQLString },
+          }
+        }) },
+        weight: { type: GraphQLInt},
+        amount: { type: GraphQLInt},
+        available: { type: GraphQLBoolean},
+        imgSmall: { type: new GraphQLList(GraphQLString)},
+        imgBig: { type: new GraphQLList(GraphQLString)},
+        price: { type: GraphQLFloat},
+      },
+      resolve: async (parentValue, args, context) => {
+        const dbArgs = {};
+        Object.keys(args).forEach((key) => {
+          dbArgs[key] = args[key];
+        });
+        const callback = async () => {
+          const product = await Product.findByIdAndUpdate(args.id, args, { new: true });
+          return { product };
+        }
+        return verifyRole(context.token, 'admin', callback, 'product');
+      }
+    },
+    deleteProduct: {
+      type: new GraphQLObjectType({ name: 'DeleteProduct', fields: { product: { type: ProductType } } }),
+      args: {
+        id: { type: new GraphQLNonNull(GraphQLID) }
+      },
+      resolve: async (parentValue, args, context) => {
+        const callback = async () => {
+          const product = await Product.findByIdAndDelete(args.id, { new: false });
           return { product };
         }
         return verifyRole(context.token, 'admin', callback, 'product');

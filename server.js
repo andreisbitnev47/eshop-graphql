@@ -6,19 +6,23 @@ const bodyParser = require('body-parser');
 const schema = require('./schema/schema');
 const fileUpload = require('express-fileupload');
 const get = require('lodash/get');
-const cors = require('cors')
+const cors = require('cors');
 require('dotenv-safe').config();
 
 const app = express();
 
 mongoose.connect(process.env.MONGO_URL);
 
+function getToken(request) {
+  return get(request, 'headers.authorization', 'Bearer ').split('Bearer ')[1];
+}
+
 app.use(fileUpload());
 app.use(bodyParser.json());
 app.use('/graphql', cors(), expressGraphQL(request => ({
   schema,
   graphiql: true,
-  context: { token: get(request, 'headers.authorization', 'Bearer ').split('Bearer ')[1] }
+  context: { token: getToken(request) }
 })));
 
 app.use('/images', express.static('images'));

@@ -81,6 +81,14 @@ input contentTitleInput {
   est: String
 }
 
+type DeleteProduct {
+  product: Product
+}
+
+type EditProduct {
+  product: Product
+}
+
 type Login {
   token: String
 }
@@ -88,7 +96,9 @@ type Login {
 type Mutation {
   addUser(username: String!, email: String!, password: String!, role: String!): NewUser
   login(username: String!, password: String!): Login
-  addProduct(title: productTitleInput, descriptionShort: productDescriptionShortInput, descriptionLong: productDescriptionLongInput, weight: Int, amount: Int, available: Boolean, imgSmall: [String], imgBig: [String], price: Float!): NewProduct
+  addProduct(title: productTitleAddInput, descriptionShort: productDescriptionShortAddInput, descriptionLong: productDescriptionLongAddInput, weight: Int, amount: Int, available: Boolean, imgSmall: [String], imgBig: [String], price: Float!): NewProduct
+  editProduct(id: ID!, title: productTitleEditInput, descriptionShort: productDescriptionShortEditInput, descriptionLong: productDescriptionLongEditInput, weight: Int, amount: Int, available: Boolean, imgSmall: [String], imgBig: [String], price: Float): EditProduct
+  deleteProduct(id: ID!): DeleteProduct
   addOrder(ShippingProviderId: ID!, email: String!, orderProducts: [orderProductsInput]!): NewOrder
   addShippingProvider(name: String!, address: [String]!, options: [ShippingProviderOptionsInput]!): NewShippingProvider
   addTranslation(key: String!, en: String!, est: String!, rus: String!): NewTranslation
@@ -184,20 +194,38 @@ type Product {
   price: Float
 }
 
-input productDescriptionLongInput {
+input productDescriptionLongAddInput {
   en: String!
   rus: String
   est: String
 }
 
-input productDescriptionShortInput {
+input productDescriptionLongEditInput {
+  en: String
+  rus: String
+  est: String
+}
+
+input productDescriptionShortAddInput {
   en: String!
   rus: String
   est: String
 }
 
-input productTitleInput {
+input productDescriptionShortEditInput {
+  en: String
+  rus: String
+  est: String
+}
+
+input productTitleAddInput {
   en: String!
+  rus: String
+  est: String
+}
+
+input productTitleEditInput {
+  en: String
   rus: String
   est: String
 }
