@@ -427,10 +427,10 @@ const mutation = new GraphQLObjectType({
         password: { type: new GraphQLNonNull(GraphQLString)},
         role: { type: new GraphQLNonNull(GraphQLString)},
       },
-      resolve: (parentValue, { username, email, password }, context) => {
+      resolve: (parentValue, { username, email, password, role }, context) => {
         const callback = () => new Promise((resolve, reject) => {
-          bcrypt.hash(process.env.DEFAULT_PASSWORD, saltRounds, (err, hash) => {
-            new User({ email, email, password: hash, role }).save((err, user) => {
+          bcrypt.hash(password, saltRounds, (err, hash) => {
+            new User({ username, email, password: hash, role }).save((err, user) => {
               if (err) {
                 console.log(err)
               }
