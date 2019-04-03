@@ -74,7 +74,7 @@ function getUserType(name) {
         id: { type: GraphQLID },
         username: { type: GraphQLString },
         email: { type: GraphQLString },
-        password: { type: GraphQLString },
+        role: { type: GraphQLString },
         orders: {
           type: new GraphQLList(UserOrders),
           resolve(parentValue) {
@@ -438,8 +438,7 @@ const mutation = new GraphQLObjectType({
             });
           });
         });
-        return callback();
-        // return verifyRole(context.token, 'admin', callback, 'user');
+        return verifyRole(context.token, 'admin', callback, 'user');
       }
     },
     login: {
