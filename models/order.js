@@ -5,7 +5,9 @@ const OrderSchema = new Schema({
     total: { type: Number, required: true },
     totalWithShipping: { type: Number, required: true },
     status: { type: String, required: true },
+    phone: { type: String },
     products: { type: [{
+      productId: { type: String, required: true },
       title: { type: String, required: true },
       amount: { type: Number, required: true },
       price: { type: Number, required: true },
@@ -13,6 +15,7 @@ const OrderSchema = new Schema({
       product: { type: Schema.Types.ObjectId, ref: 'Product' }
     }]},
     shippingProvider: { type: {
+      shippingProviderId: { type: String },
       name: { type: String, required: true },
       optionName: { type: String },
       price: { type: Number, required: true },

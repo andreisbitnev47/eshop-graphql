@@ -81,6 +81,14 @@ input contentTitleInput {
   est: String
 }
 
+type DeleteImage {
+  image: String
+}
+
+type DeleteImages {
+  images: [String]
+}
+
 type DeleteProduct {
   product: Product
 }
@@ -99,7 +107,9 @@ type Mutation {
   addProduct(title: productTitleAddInput, descriptionShort: productDescriptionShortAddInput, descriptionLong: productDescriptionLongAddInput, weight: Int, amount: Int, available: Boolean, imgSmall: [String], imgBig: [String], price: Float!): NewProduct
   editProduct(id: ID!, title: productTitleEditInput, descriptionShort: productDescriptionShortEditInput, descriptionLong: productDescriptionLongEditInput, weight: Int, amount: Int, available: Boolean, imgSmall: [String], imgBig: [String], price: Float): EditProduct
   deleteProduct(id: ID!): DeleteProduct
-  addOrder(ShippingProviderId: ID!, email: String!, orderProducts: [orderProductsInput]!): NewOrder
+  deleteImage(id: String!): DeleteImage
+  deleteImages(ids: [String]!): DeleteImages
+  addOrder(ShippingProviderId: ID!, email: String!, phone: String, orderProducts: [orderProductsInput]!): NewOrder
   addShippingProvider(name: String!, address: [String]!, options: [ShippingProviderOptionsInput]!): NewShippingProvider
   addTranslation(key: String!, en: String!, est: String!, rus: String!): NewTranslation
   addContent(handle: String!, group: String, title: [contentTitleInput], subTitle: [contentSubTitleInput], paragraph: [contentParagraphInput], span: [contentSpanInput], link: [contentLinkInput], img: [contentImgInput]): NewContent
@@ -131,6 +141,7 @@ type NewUser {
 
 type Order {
   id: ID
+  phone: String
   total: Float
   totalWithShipping: Float
   status: String
@@ -140,6 +151,7 @@ type Order {
 }
 
 type OrderProducts {
+  productId: String
   title: String
   amount: Int
   price: Float
@@ -167,6 +179,7 @@ type OrderProductsProduct {
 }
 
 type OrderShippingProvider {
+  shippingProviderId: String
   name: String
   optionName: String
   price: Float
@@ -291,6 +304,7 @@ type UserOfOrder {
 
 type UserOrders {
   id: ID
+  phone: String
   total: Float
   totalWithShipping: Float
   status: String
