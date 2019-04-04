@@ -16,7 +16,8 @@ const app = express();
 mongoose.connect(process.env.MONGO_URL);
 
 function getToken(request) {
-  return get(request, 'headers.authorization', 'Bearer ').split('Bearer ')[1];
+  const asd = get(request, 'headers.authorization', '');
+  return asd;
 }
 app.use(cors());
 app.use(fileUpload());
