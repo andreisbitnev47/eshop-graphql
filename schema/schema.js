@@ -216,6 +216,21 @@ const ContentImg = new GraphQLObjectType({
     url: { type: GraphQLString },
   },
 });
+const ContentImgAllAlt = new GraphQLObjectType({
+  name: 'ContentImgAllAlt',
+  fields: {
+    en: { type: GraphQLString },
+    est: { type: GraphQLString },
+    rus: { type: GraphQLString },
+  }
+});
+const ContentImgAll = new GraphQLObjectType({
+  name: 'ContentImgAll',
+  fields: {
+    url: { type: GraphQLString },
+    alt: { type: ContentImgAllAlt },
+  },
+});
 function getContentType(name) {
   return new GraphQLObjectType({
     name,
@@ -253,6 +268,11 @@ function getContentType(name) {
         args: { language: { type: new GraphQLNonNull(GraphQLString) } },
         resolve: (obj, { language }) => (obj.img.map(image => ({ alt: image.alt[language], url: image.url })))
       },
+      imgAll: {
+        type: new GraphQLList(ContentImgAll),
+        args: {},
+        resolve: (obj) => obj.img,
+      }
     })
   });
 }
@@ -716,13 +736,42 @@ const mutation = new GraphQLObjectType({
         return verifyRole(context.token, 'admin', callback, 'translation');
       }
     },
+    editTranslation: {
+      type: new GraphQLObjectType({ name: 'EditTranslation', fields: { translation: { type: TranslationType } } }),
+      args: {
+          id: { type: new GraphQLNonNull(GraphQLID) },
+          en: { type: GraphQLString},
+          est: { type:GraphQLString},
+          rus: { type: GraphQLString},
+      },
+      resolve: async (parentValue, { id, en, est, rus }, context) => {
+        const callback = async () => {
+          const translation = await Translation.findByIdAndUpdate(id, { en, est, rus }, { new: true });
+          return { translation };
+        }
+        return verifyRole(context.token, 'admin', callback, 'translation');
+      }
+    },
+    deleteTranslation: {
+      type: new GraphQLObjectType({ name: 'DeleteTranslation', fields: { translation: { type: TranslationType } } }),
+      args: {
+        id: { type: new GraphQLNonNull(GraphQLID) },
+      },
+      resolve: async (parentValue, { id }, context) => {
+        const callback = async () => {
+          const translation = await Translation.findByIdAndDelete(id, { new: false });
+          return { translation };
+        }
+        return verifyRole(context.token, 'admin', callback, 'translation');
+      }
+    },
     addContent: {
       type: new GraphQLObjectType({ name: 'NewContent', fields: { content: { type: ContentType } } }),
       args: {
         handle: { type: new GraphQLNonNull(GraphQLString) },
         group: { type: GraphQLString },
         title: { type: new GraphQLList(new GraphQLInputObjectType({
-          name: 'contentTitleInput',
+          name: 'contentTitleAddInput',
           fields: {
             en: { type: GraphQLString },
             rus: { type: GraphQLString },
@@ -730,7 +779,7 @@ const mutation = new GraphQLObjectType({
           }
         })) },
         subTitle: { type: new GraphQLList(new GraphQLInputObjectType({
-          name: 'contentSubTitleInput',
+          name: 'contentSubTitleAddInput',
           fields: {
             en: { type: GraphQLString },
             rus: { type: GraphQLString },
@@ -738,7 +787,7 @@ const mutation = new GraphQLObjectType({
           }
         })) },
         paragraph: { type: new GraphQLList(new GraphQLInputObjectType({
-          name: 'contentParagraphInput',
+          name: 'contentParagraphAddInput',
           fields: {
             en: { type: GraphQLString },
             rus: { type: GraphQLString },
@@ -746,7 +795,7 @@ const mutation = new GraphQLObjectType({
           }
         })) },
         span: { type: new GraphQLList(new GraphQLInputObjectType({
-          name: 'contentSpanInput',
+          name: 'contentSpanAddInput',
           fields: {
             en: { type: GraphQLString },
             rus: { type: GraphQLString },
@@ -754,24 +803,24 @@ const mutation = new GraphQLObjectType({
           }
         })) },
         link: { type: new GraphQLList(new GraphQLInputObjectType({
-          name: 'contentLinkInput',
+          name: 'contentLinkAddInput',
           fields: {
             en: { type: new GraphQLInputObjectType({
-              name: 'contentLinkEnInput',
+              name: 'contentLinkEnAddInput',
               fields: {
                 url: { type: GraphQLString },
                 anchor: { type: GraphQLString },
               }
             }) },
             est: { type: new GraphQLInputObjectType({
-              name: 'contentLinkEstInput',
+              name: 'contentLinkEstAddInput',
               fields: {
                 url: { type: GraphQLString },
                 anchor: { type: GraphQLString },
               }
             }) },
             rus: { type: new GraphQLInputObjectType({
-              name: 'contentLinkRusInput',
+              name: 'contentLinkRusAddInput',
               fields: {
                 url: { type: GraphQLString },
                 anchor: { type: GraphQLString },
@@ -780,10 +829,10 @@ const mutation = new GraphQLObjectType({
           }
         })) },
         img: { type: new GraphQLList(new GraphQLInputObjectType({
-          name: 'contentImgInput',
+          name: 'contentImgAddInput',
           fields: {
             alt: { type: new GraphQLInputObjectType({
-              name: 'contentImgAltInput',
+              name: 'contentImgAltAddInput',
               fields: {
                 en: { type: GraphQLString },
                 est: { type: GraphQLString },
@@ -801,6 +850,108 @@ const mutation = new GraphQLObjectType({
         });
         const callback = async () => {
           const content = await new Content(dbArgs).save();
+          return { content };
+        }
+        return verifyRole(context.token, 'admin', callback, 'content');
+      }
+    },
+    editContent: {
+      type: new GraphQLObjectType({ name: 'EditContent', fields: { content: { type: ContentType } } }),
+      args: {
+        id: { type: new GraphQLNonNull(GraphQLID) },
+        title: { type: new GraphQLList(new GraphQLInputObjectType({
+          name: 'contentTitleEditInput',
+          fields: {
+            en: { type: GraphQLString },
+            rus: { type: GraphQLString },
+            est: { type: GraphQLString },
+          }
+        })) },
+        subTitle: { type: new GraphQLList(new GraphQLInputObjectType({
+          name: 'contentSubTitleEditInput',
+          fields: {
+            en: { type: GraphQLString },
+            rus: { type: GraphQLString },
+            est: { type: GraphQLString },
+          }
+        })) },
+        paragraph: { type: new GraphQLList(new GraphQLInputObjectType({
+          name: 'contentParagraphEditInput',
+          fields: {
+            en: { type: GraphQLString },
+            rus: { type: GraphQLString },
+            est: { type: GraphQLString },
+          }
+        })) },
+        span: { type: new GraphQLList(new GraphQLInputObjectType({
+          name: 'contentSpanEditInput',
+          fields: {
+            en: { type: GraphQLString },
+            rus: { type: GraphQLString },
+            est: { type: GraphQLString },
+          }
+        })) },
+        link: { type: new GraphQLList(new GraphQLInputObjectType({
+          name: 'contentLinkEditInput',
+          fields: {
+            en: { type: new GraphQLInputObjectType({
+              name: 'contentLinkEnEditInput',
+              fields: {
+                url: { type: GraphQLString },
+                anchor: { type: GraphQLString },
+              }
+            }) },
+            est: { type: new GraphQLInputObjectType({
+              name: 'contentLinkEstEditInput',
+              fields: {
+                url: { type: GraphQLString },
+                anchor: { type: GraphQLString },
+              }
+            }) },
+            rus: { type: new GraphQLInputObjectType({
+              name: 'contentLinkRusEditInput',
+              fields: {
+                url: { type: GraphQLString },
+                anchor: { type: GraphQLString },
+              }
+            }) },
+          }
+        })) },
+        img: { type: new GraphQLList(new GraphQLInputObjectType({
+          name: 'contentImgEditInput',
+          fields: {
+            alt: { type: new GraphQLInputObjectType({
+              name: 'contentImgAltEditInput',
+              fields: {
+                en: { type: GraphQLString },
+                est: { type: GraphQLString },
+                rus: { type: GraphQLString },
+              }
+            }) },
+            url: { type: GraphQLString },
+          }
+        })) },
+      },
+      resolve: async (parentValue, args, context) => {
+        const dbArgs = {};
+        Object.keys(args).forEach((key) => {
+          dbArgs[key] = args[key];
+        });
+        const callback = async () => {
+          const content = await Content.findByIdAndUpdate(args.id, dbArgs, { new: true });
+          return { content };
+        }
+        return verifyRole(context.token, 'admin', callback, 'content');
+      }
+    },
+    deleteContent: {
+      type: new GraphQLObjectType({ name: 'DeleteContent', fields: { content: { type: ContentType } } }),
+      args: {
+        id: { type: new GraphQLNonNull(GraphQLID) },
+      },
+      resolve: async (parentValue, { id }, context) => {
+        const callback = async () => {
+          const content = await Content.findByIdAndDelete(id, { new: false });
           return { content };
         }
         return verifyRole(context.token, 'admin', callback, 'content');

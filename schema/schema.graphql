@@ -13,6 +13,7 @@ type Content {
   span(language: String!): [String]
   link(language: String!): [ContentLink]
   img(language: String!): [ContentImg]
+  imgAll: [ContentImgAll]
 }
 
 type ContentImg {
@@ -20,14 +21,36 @@ type ContentImg {
   url: String
 }
 
-input contentImgAltInput {
+input contentImgAddInput {
+  alt: contentImgAltAddInput
+  url: String
+}
+
+type ContentImgAll {
+  url: String
+  alt: ContentImgAllAlt
+}
+
+type ContentImgAllAlt {
   en: String
   est: String
   rus: String
 }
 
-input contentImgInput {
-  alt: contentImgAltInput
+input contentImgAltAddInput {
+  en: String
+  est: String
+  rus: String
+}
+
+input contentImgAltEditInput {
+  en: String
+  est: String
+  rus: String
+}
+
+input contentImgEditInput {
+  alt: contentImgAltEditInput
   url: String
 }
 
@@ -36,49 +59,98 @@ type ContentLink {
   anchor: String
 }
 
-input contentLinkEnInput {
+input contentLinkAddInput {
+  en: contentLinkEnAddInput
+  est: contentLinkEstAddInput
+  rus: contentLinkRusAddInput
+}
+
+input contentLinkEditInput {
+  en: contentLinkEnEditInput
+  est: contentLinkEstEditInput
+  rus: contentLinkRusEditInput
+}
+
+input contentLinkEnAddInput {
   url: String
   anchor: String
 }
 
-input contentLinkEstInput {
+input contentLinkEnEditInput {
   url: String
   anchor: String
 }
 
-input contentLinkInput {
-  en: contentLinkEnInput
-  est: contentLinkEstInput
-  rus: contentLinkRusInput
-}
-
-input contentLinkRusInput {
+input contentLinkEstAddInput {
   url: String
   anchor: String
 }
 
-input contentParagraphInput {
+input contentLinkEstEditInput {
+  url: String
+  anchor: String
+}
+
+input contentLinkRusAddInput {
+  url: String
+  anchor: String
+}
+
+input contentLinkRusEditInput {
+  url: String
+  anchor: String
+}
+
+input contentParagraphAddInput {
   en: String
   rus: String
   est: String
 }
 
-input contentSpanInput {
+input contentParagraphEditInput {
   en: String
   rus: String
   est: String
 }
 
-input contentSubTitleInput {
+input contentSpanAddInput {
   en: String
   rus: String
   est: String
 }
 
-input contentTitleInput {
+input contentSpanEditInput {
   en: String
   rus: String
   est: String
+}
+
+input contentSubTitleAddInput {
+  en: String
+  rus: String
+  est: String
+}
+
+input contentSubTitleEditInput {
+  en: String
+  rus: String
+  est: String
+}
+
+input contentTitleAddInput {
+  en: String
+  rus: String
+  est: String
+}
+
+input contentTitleEditInput {
+  en: String
+  rus: String
+  est: String
+}
+
+type DeleteContent {
+  content: Content
 }
 
 type DeleteImage {
@@ -93,8 +165,20 @@ type DeleteProduct {
   product: Product
 }
 
+type DeleteTranslation {
+  translation: Translation
+}
+
+type EditContent {
+  content: Content
+}
+
 type EditProduct {
   product: Product
+}
+
+type EditTranslation {
+  translation: Translation
 }
 
 type Login {
@@ -112,7 +196,11 @@ type Mutation {
   addOrder(ShippingProviderId: ID!, email: String!, phone: String, orderProducts: [orderProductsInput]!): NewOrder
   addShippingProvider(name: String!, address: [String]!, options: [ShippingProviderOptionsInput]!): NewShippingProvider
   addTranslation(key: String!, en: String!, est: String!, rus: String!): NewTranslation
-  addContent(handle: String!, group: String, title: [contentTitleInput], subTitle: [contentSubTitleInput], paragraph: [contentParagraphInput], span: [contentSpanInput], link: [contentLinkInput], img: [contentImgInput]): NewContent
+  editTranslation(id: ID!, en: String, est: String, rus: String): EditTranslation
+  deleteTranslation(id: ID!): DeleteTranslation
+  addContent(handle: String!, group: String, title: [contentTitleAddInput], subTitle: [contentSubTitleAddInput], paragraph: [contentParagraphAddInput], span: [contentSpanAddInput], link: [contentLinkAddInput], img: [contentImgAddInput]): NewContent
+  editContent(id: ID!, title: [contentTitleEditInput], subTitle: [contentSubTitleEditInput], paragraph: [contentParagraphEditInput], span: [contentSpanEditInput], link: [contentLinkEditInput], img: [contentImgEditInput]): EditContent
+  deleteContent(id: ID!): DeleteContent
 }
 
 type NewContent {
