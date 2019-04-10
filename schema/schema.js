@@ -149,12 +149,12 @@ function getProductType(name) {
       descriptionShort: {
         type: GraphQLString,
         args: { language: { type: new GraphQLNonNull(GraphQLString) } },
-        resolve: (obj, { language }) => obj.title[language]
+        resolve: (obj, { language }) => obj.descriptionShort[language]
       },
       descriptionLong: {
         type: GraphQLString,
         args: { language: { type: new GraphQLNonNull(GraphQLString) } },
-        resolve: (obj, { language }) => obj.title[language]
+        resolve: (obj, { language }) => obj.descriptionLong[language]
       },
       handle: { type: GraphQLString },
       weight: { type: GraphQLInt },
