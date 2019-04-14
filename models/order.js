@@ -16,6 +16,7 @@ const OrderSchema = new Schema({
     }]},
     shippingProvider: { type: {
       shippingProviderId: { type: String },
+      shippingProviderAddress: { type: String },
       name: { type: String, required: true },
       optionName: { type: String },
       price: { type: Number, required: true },

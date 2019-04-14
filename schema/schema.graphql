@@ -193,7 +193,7 @@ type Mutation {
   deleteProduct(id: ID!): DeleteProduct
   deleteImage(id: String!): DeleteImage
   deleteImages(ids: [String]!): DeleteImages
-  addOrder(ShippingProviderId: ID!, email: String!, phone: String, orderProducts: [orderProductsInput]!): NewOrder
+  addOrder(shippingProviderId: ID!, shippingProviderAddress: String!, email: String!, phone: String, orderProducts: [orderProductsInput]!): NewOrder
   addShippingProvider(name: String!, address: [String]!, options: [ShippingProviderOptionsInput]!): NewShippingProvider
   addTranslation(key: String!, en: String!, est: String!, rus: String!): NewTranslation
   editTranslation(id: ID!, en: String, est: String, rus: String): EditTranslation
@@ -268,6 +268,7 @@ type OrderProductsProduct {
 
 type OrderShippingProvider {
   shippingProviderId: String
+  shippingProviderAddress: String
   name: String
   optionName: String
   price: Float

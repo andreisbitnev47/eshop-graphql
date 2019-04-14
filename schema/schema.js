@@ -109,6 +109,7 @@ const OrderShippingProvider = new GraphQLObjectType({
   name: 'OrderShippingProvider',
   fields: {
     shippingProviderId: { type: GraphQLString },
+    shippingProviderAddress: { type: GraphQLString },
     name: { type: GraphQLString },
     optionName: { type: GraphQLString },
     price: { type: GraphQLFloat },
@@ -633,7 +634,8 @@ const mutation = new GraphQLObjectType({
     addOrder: {
       type: new GraphQLObjectType({ name: 'NewOrder', fields: { order: { type: OrderType } } }),
       args: {
-        ShippingProviderId: { type: new GraphQLNonNull(GraphQLID) },
+        shippingProviderId: { type: new GraphQLNonNull(GraphQLID) },
+        shippingProviderAddress: { type: new GraphQLNonNull(GraphQLString) },
         email: { type: new GraphQLNonNull(GraphQLString) },
         phone: { type: GraphQLString },
         orderProducts: {
@@ -646,7 +648,7 @@ const mutation = new GraphQLObjectType({
           }))),
         },
       },
-      resolve: async (parentValue, { email, orderProducts, ShippingProviderId, phone }) => {
+      resolve: async (parentValue, { email, orderProducts, shippingProviderId, phone }) => {
         try {
           const productIds = orderProducts.map(({ id }) => id);
           let [user, dbProducts] = await Promise.all([
@@ -679,7 +681,12 @@ const mutation = new GraphQLObjectType({
               };
             })
             const total = products.reduce((acc, product) => (acc + product.total), 0);
-            const shippingProvider = await ShippingProvider.findById(ShippingProviderId);
+            const shippingProvider = await ShippingProvider.findById(shippingProviderId);
+            //check address
+            if (!shippingProvider.address.includes(shippingProviderAddress)) {
+              console.log('wrong address supplied');
+              return { order: null };
+            }
             const cheapestOption = shippingProvider.options.reduce((minOption, option) => (minOption.price < option.price ? minOption : option), shippingProvider.options[0]);
             const order = await new Order({
               phone,
@@ -690,6 +697,7 @@ const mutation = new GraphQLObjectType({
               totalWithShipping: total + cheapestOption.price,
               shippingProvider: {
                 shippingProvider,
+                shippingProviderAddress,
                 name: shippingProvider.name,
                 optionName: cheapestOption.name,
                 price: cheapestOption.price,
