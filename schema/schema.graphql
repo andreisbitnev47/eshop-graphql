@@ -334,7 +334,7 @@ input productTitleEditInput {
 type RootQuery {
   users: [User]
   user(id: ID!): User
-  products: [Product]
+  products(ids: [ID]): [Product]
   product(id: ID!): Product
   productByHandle(handle: String!): Product
   orders: [Order]
