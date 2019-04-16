@@ -189,11 +189,11 @@ type Mutation {
   addUser(username: String!, email: String!, password: String!, role: String!): NewUser
   login(username: String!, password: String!): Login
   addProduct(title: productTitleAddInput, descriptionShort: productDescriptionShortAddInput, descriptionLong: productDescriptionLongAddInput, weight: Int, amount: Int, available: Boolean, imgSmall: [String], imgBig: [String], price: Float!): NewProduct
-  editProduct(id: ID!, title: productTitleEditInput, descriptionShort: productDescriptionShortEditInput, descriptionLong: productDescriptionLongEditInput, weight: Int, amount: Int, available: Boolean, imgSmall: [String], imgBig: [String], price: Float): EditProduct
+  editProduct(id: ID!, handle: String, title: productTitleEditInput, descriptionShort: productDescriptionShortEditInput, descriptionLong: productDescriptionLongEditInput, weight: Int, amount: Int, available: Boolean, imgSmall: [String], imgBig: [String], price: Float): EditProduct
   deleteProduct(id: ID!): DeleteProduct
   deleteImage(id: String!): DeleteImage
   deleteImages(ids: [String]!): DeleteImages
-  addOrder(shippingProviderId: ID!, shippingProviderAddress: String!, email: String!, phone: String, orderProducts: [orderProductsInput]!): NewOrder
+  addOrder(shippingProviderId: ID!, shippingProviderAddress: String!, email: String!, phone: String, language: String, orderProducts: [orderProductsInput]!): NewOrder
   addShippingProvider(name: String!, address: [String]!, options: [ShippingProviderOptionsInput]!): NewShippingProvider
   addTranslation(key: String!, en: String!, est: String!, rus: String!): NewTranslation
   editTranslation(id: ID!, en: String, est: String, rus: String): EditTranslation

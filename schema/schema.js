@@ -20,10 +20,27 @@ const Product = require('../models/product');
 const Translation = require('../models/translation');
 const Content = require('../models/content');
 const ShippingProvider = require('../models/shippingProvider');
+const { sendMail, sendTelegramMessage } = require('../util');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 
 const jwt = require('jsonwebtoken');
+
+async function sendOrderCompleteEmail(orderId, email, language = 'en', price) {
+  return new Promise(async (resolve, reject) => {
+    const content = await Content.findOne({ group: 'mail', handle: 'order_complete_mail' });
+    if (!content) {
+      resolve(false);
+    }
+    const subject = get(content, `title[0].${language}`, 'Order nr {{orderId}}').split('{{orderId}}').join(orderId);
+    const paragraphArr = content.paragraph.map(paragraph => paragraph[language]
+      .split('{{orderId}}').join(orderId)
+      .split('{{price}}').join(price));
+    const text = paragraphArr.join('\n');
+    const result = await sendMail(text, subject, email);
+    resolve(result);
+  })
+}
 
 function getToken(username, password, role) {
   return new Promise((resolve, reject) => {
@@ -540,7 +557,8 @@ const mutation = new GraphQLObjectType({
     editProduct: {
       type: new GraphQLObjectType({ name: 'EditProduct', fields: { product: { type: ProductType } } }),
       args: {
-        id: {type: new GraphQLNonNull(GraphQLID)},
+        id: { type: new GraphQLNonNull(GraphQLID) },
+        handle: { type: GraphQLString },
         title: { type: new GraphQLInputObjectType({
           name: 'productTitleEditInput',
           fields: {
@@ -638,6 +656,7 @@ const mutation = new GraphQLObjectType({
         shippingProviderAddress: { type: new GraphQLNonNull(GraphQLString) },
         email: { type: new GraphQLNonNull(GraphQLString) },
         phone: { type: GraphQLString },
+        language: { type: GraphQLString },
         orderProducts: {
           type: new GraphQLNonNull(new GraphQLList(new GraphQLInputObjectType({
             name: 'orderProductsInput',
@@ -648,7 +667,7 @@ const mutation = new GraphQLObjectType({
           }))),
         },
       },
-      resolve: async (parentValue, { email, orderProducts, shippingProviderId, phone }) => {
+      resolve: async (parentValue, { email, orderProducts, shippingProviderId, phone, shippingProviderAddress, language }) => {
         try {
           const productIds = orderProducts.map(({ id }) => id);
           let [user, dbProducts] = await Promise.all([
@@ -705,7 +724,12 @@ const mutation = new GraphQLObjectType({
               },
             }).save();
             await User.findByIdAndUpdate(user.id, { $push: { orders: order } });
-            return { order };
+            const emailSent = await sendOrderCompleteEmail(order.id, email, language, total + cheapestOption.price);
+            if (emailSent) {
+              sendTelegramMessage(order.id, total + cheapestOption.price, email);
+              return { order };
+            }
+            return { order: null };
           }
           return { order: null };
         } catch {

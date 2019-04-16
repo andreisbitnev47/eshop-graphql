@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const ContentSchema = new Schema({
-  handle: { type: String, unique: true },
+  handle: { type: String },
   group: { type: String },
   title: { type: [{
     en: { type: String },
