@@ -26,7 +26,7 @@ const saltRounds = 10;
 
 const jwt = require('jsonwebtoken');
 
-async function sendOrderCompleteEmail(orderId, email, language = 'en', price) {
+async function sendOrderCompleteEmail(orderId, email, language = 'en', amount) {
   return new Promise(async (resolve, reject) => {
     const content = await Content.findOne({ group: 'mail', handle: 'order_complete_mail' });
     if (!content) {
@@ -35,7 +35,7 @@ async function sendOrderCompleteEmail(orderId, email, language = 'en', price) {
     const subject = get(content, `title[0].${language}`, 'Order nr {{orderId}}').split('{{orderId}}').join(orderId);
     const paragraphArr = content.paragraph.map(paragraph => paragraph[language]
       .split('{{orderId}}').join(orderId)
-      .split('{{price}}').join(price));
+      .split('{{amount}}').join(amount));
     const text = paragraphArr.join('\n');
     const result = await sendMail(text, subject, email);
     resolve(result);
