@@ -34,9 +34,9 @@ async function sendOrderCompleteEmail(orderId, email, language = 'en', amount) {
       resolve(false);
     }
     const subject = get(content, `title[0].${language}`, 'Order nr {{orderId}}').split('{{orderId}}').join(orderId);
-    const paragraphArr = content.paragraph.map(paragraph => paragraph[language]
+    const paragraphArr = content.paragraph.map(paragraph => paragraph[language] ? paragraph[language]
       .split('{{orderId}}').join(orderId)
-      .split('{{amount}}').join(amount));
+      .split('{{amount}}').join(amount) : '');
     const text = paragraphArr.join('\n');
     const result = await sendMail(text, subject, email);
     resolve(result);
