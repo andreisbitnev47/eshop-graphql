@@ -25,6 +25,7 @@ const bcrypt = require('bcrypt');
 const saltRounds = 10;
 
 const jwt = require('jsonwebtoken');
+const Big = require('big.js');
 
 async function sendOrderCompleteEmail(orderId, email, language = 'en', amount) {
   return new Promise(async (resolve, reject) => {
@@ -689,7 +690,7 @@ const mutation = new GraphQLObjectType({
           if (user && dbProducts && dbProducts.length === productIds.length) {
             const products = dbProducts.map(product => {
               const amount = orderProducts.find(({ id }) => id === product.id).amount;
-              const total = amount * product.price;
+              const total = Big(amount).times(Big(product.price));
               return {
                 amount,
                 total,
@@ -699,7 +700,7 @@ const mutation = new GraphQLObjectType({
                 price: product.price,
               };
             })
-            const total = products.reduce((acc, product) => (acc + product.total), 0);
+            const total = products.reduce((acc, product) => acc.plus(Big(product.total)), Big('0'));
             const shippingProvider = await ShippingProvider.findById(shippingProviderId);
             //check address
             if (!shippingProvider.address.includes(shippingProviderAddress)) {
@@ -707,13 +708,14 @@ const mutation = new GraphQLObjectType({
               return { order: null };
             }
             const cheapestOption = shippingProvider.options.reduce((minOption, option) => (minOption.price < option.price ? minOption : option), shippingProvider.options[0]);
+            const totalWithShipping = total.plus(Big(cheapestOption.price)).toFixed(2);
             const order = await new Order({
               phone,
-              total,
               products,
               user,
+              totalWithShipping: parseFloat(totalWithShipping),
+              total: parseFloat(total.toFixed(2)),
               status: 'NEW',
-              totalWithShipping: total + cheapestOption.price,
               shippingProvider: {
                 shippingProvider,
                 shippingProviderAddress,
@@ -724,9 +726,9 @@ const mutation = new GraphQLObjectType({
               },
             }).save();
             await User.findByIdAndUpdate(user.id, { $push: { orders: order } });
-            const emailSent = await sendOrderCompleteEmail(order.id, email, language, total + cheapestOption.price);
+            const emailSent = await sendOrderCompleteEmail(order.id, email, language, totalWithShipping);
             if (emailSent) {
-              sendTelegramMessage(order.id, total + cheapestOption.price, email);
+              sendTelegramMessage(order.id, totalWithShipping, email);
               return { order };
             }
             return { order: null };
@@ -735,6 +737,33 @@ const mutation = new GraphQLObjectType({
         } catch {
           return { order: null };
         }
+      }
+    },
+    editOrder: {
+      type: new GraphQLObjectType({ name: 'EditOrder', fields: { order: { type: OrderType } } }),
+      args: {
+          id: { type: new GraphQLNonNull(GraphQLID) },
+          status: { type: new GraphQLNonNull(GraphQLString) },
+      },
+      resolve: async (parentValue, { id, status }, context) => {
+        const callback = async () => {
+          const order = await Order.findByIdAndUpdate(id, { status }, { new: true });
+          return { order };
+        }
+        return verifyRole(context.token, 'admin', callback, 'order');
+      }
+    },
+    deleteOrder: {
+      type: new GraphQLObjectType({ name: 'DeleteOrder', fields: { order: { type: OrderType } } }),
+      args: {
+        id: { type: new GraphQLNonNull(GraphQLID) },
+      },
+      resolve: async (parentValue, { id }, context) => {
+        const callback = async () => {
+          const order = await Order.findByIdAndDelete(id, { new: false });
+          return { order };
+        }
+        return verifyRole(context.token, 'admin', callback, 'order');
       }
     },
     addShippingProvider: {

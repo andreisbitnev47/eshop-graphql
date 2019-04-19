@@ -161,6 +161,10 @@ type DeleteImages {
   images: [String]
 }
 
+type DeleteOrder {
+  order: Order
+}
+
 type DeleteProduct {
   product: Product
 }
@@ -171,6 +175,10 @@ type DeleteTranslation {
 
 type EditContent {
   content: Content
+}
+
+type EditOrder {
+  order: Order
 }
 
 type EditProduct {
@@ -194,6 +202,8 @@ type Mutation {
   deleteImage(id: String!): DeleteImage
   deleteImages(ids: [String]!): DeleteImages
   addOrder(shippingProviderId: ID!, shippingProviderAddress: String!, email: String!, phone: String, language: String, orderProducts: [orderProductsInput]!): NewOrder
+  editOrder(id: ID!, status: String!): EditOrder
+  deleteOrder(id: ID!): DeleteOrder
   addShippingProvider(name: String!, address: [String]!, options: [ShippingProviderOptionsInput]!): NewShippingProvider
   addTranslation(key: String!, en: String!, est: String!, rus: String!): NewTranslation
   editTranslation(id: ID!, en: String, est: String, rus: String): EditTranslation
