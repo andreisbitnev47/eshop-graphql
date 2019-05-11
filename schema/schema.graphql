@@ -196,8 +196,8 @@ type Login {
 type Mutation {
   addUser(username: String!, email: String!, password: String!, role: String!): NewUser
   login(username: String!, password: String!): Login
-  addProduct(title: productTitleAddInput, descriptionShort: productDescriptionShortAddInput, descriptionLong: productDescriptionLongAddInput, weight: Int, amount: Int, available: Boolean, imgSmall: [String], imgBig: [String], price: Float!): NewProduct
-  editProduct(id: ID!, handle: String, title: productTitleEditInput, descriptionShort: productDescriptionShortEditInput, descriptionLong: productDescriptionLongEditInput, weight: Int, amount: Int, available: Boolean, imgSmall: [String], imgBig: [String], price: Float): EditProduct
+  addProduct(title: productTitleAddInput, descriptionShort: productDescriptionShortAddInput, descriptionLong: productDescriptionLongAddInput, weight: Int, amount: Int, available: Boolean, imgSmall: [String], imgBig: [String], price: Float!, featured: Boolean!): NewProduct
+  editProduct(id: ID!, handle: String, title: productTitleEditInput, descriptionShort: productDescriptionShortEditInput, descriptionLong: productDescriptionLongEditInput, weight: Int, amount: Int, available: Boolean, imgSmall: [String], imgBig: [String], price: Float, featured: Boolean!): EditProduct
   deleteProduct(id: ID!): DeleteProduct
   deleteImage(id: String!): DeleteImage
   deleteImages(ids: [String]!): DeleteImages
@@ -274,6 +274,7 @@ type OrderProductsProduct {
   imgSmall: [String]
   imgBig: [String]
   price: Float
+  featured: Boolean
 }
 
 type OrderShippingProvider {
@@ -304,6 +305,7 @@ type Product {
   imgSmall: [String]
   imgBig: [String]
   price: Float
+  featured: Boolean
 }
 
 input productDescriptionLongAddInput {
@@ -346,7 +348,7 @@ type RootQuery {
   users: [User]
   user(id: ID!): User
   products(ids: [ID]): [Product]
-  activeProducts(ids: [ID]): [Product]
+  activeProducts(ids: [ID], featured: Boolean): [Product]
   product(id: ID!): Product
   productByHandle(handle: String!): Product
   orders: [Order]

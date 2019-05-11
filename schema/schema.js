@@ -182,6 +182,10 @@ function getProductType(name) {
       imgSmall: { type: new GraphQLList(GraphQLString) },
       imgBig: { type: new GraphQLList(GraphQLString) },
       price: { type: GraphQLFloat },
+      featured: { 
+        type: GraphQLBoolean,
+        resolve: (obj) => !!obj.featured ? true : false,
+      },
     })
   });
 }
@@ -340,9 +344,16 @@ const RootQueryType = new GraphQLObjectType({
     activeProducts: {
       type: new GraphQLList(ProductType),
       args: {
-        ids: { type: new GraphQLList (GraphQLID) }
+        ids: { type: new GraphQLList (GraphQLID) },
+        featured: { type: GraphQLBoolean },
       },
-      resolve(parentValue, { ids }) {
+      resolve(parentValue, { ids, featured }) {
+        if (ids) {
+          return Product.find({ _id: { $in: ids }, available: true });
+        }
+        if (featured) {
+          return Product.find({ available: true, featured: true });
+        }
         return Product.find({ available: true });
       }
     },
@@ -553,6 +564,7 @@ const mutation = new GraphQLObjectType({
         imgSmall: { type: new GraphQLList(GraphQLString)},
         imgBig: { type: new GraphQLList(GraphQLString)},
         price: { type: new GraphQLNonNull(GraphQLFloat)},
+        featured: { type: new GraphQLNonNull(GraphQLBoolean) },
       },
       resolve: async (parentValue, args, context) => {
         const dbArgs = {handle: args.title.en.toLowerCase().split(' ').join('-')};
@@ -601,6 +613,7 @@ const mutation = new GraphQLObjectType({
         imgSmall: { type: new GraphQLList(GraphQLString)},
         imgBig: { type: new GraphQLList(GraphQLString)},
         price: { type: GraphQLFloat},
+        featured: { type: new GraphQLNonNull(GraphQLBoolean) }
       },
       resolve: async (parentValue, args, context) => {
         const dbArgs = {};

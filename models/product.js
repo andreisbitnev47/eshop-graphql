@@ -24,6 +24,7 @@ const ProductSchema = new Schema({
     imgSmall: [{ type: String}],
     imgBig: [{ type: String }],
     price: { type: Number },
+    featured: { type: Boolean },
 });
 
 module.exports = mongoose.model('Product', ProductSchema);
