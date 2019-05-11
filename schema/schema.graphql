@@ -346,6 +346,7 @@ type RootQuery {
   users: [User]
   user(id: ID!): User
   products(ids: [ID]): [Product]
+  activeProducts(ids: [ID]): [Product]
   product(id: ID!): Product
   productByHandle(handle: String!): Product
   orders: [Order]

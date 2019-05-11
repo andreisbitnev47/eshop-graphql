@@ -329,10 +329,21 @@ const RootQueryType = new GraphQLObjectType({
         ids: { type: new GraphQLList (GraphQLID) }
       },
       resolve(parentValue, { ids }) {
+        let callback;
         if (ids) {
-          return Product.find({ _id: { $in: ids } });
+          callback = () => Product.find({ _id: { $in: ids } });
         }
-        return Product.find({});
+        callback = () => Product.find({});
+        return verifyRole(context.token, 'admin', callback, null);
+      }
+    },
+    activeProducts: {
+      type: new GraphQLList(ProductType),
+      args: {
+        ids: { type: new GraphQLList (GraphQLID) }
+      },
+      resolve(parentValue, { ids }) {
+        return Product.find({ available: true });
       }
     },
     product: {
