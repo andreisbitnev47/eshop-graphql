@@ -328,7 +328,7 @@ const RootQueryType = new GraphQLObjectType({
       args: {
         ids: { type: new GraphQLList (GraphQLID) }
       },
-      resolve(parentValue, { ids }) {
+      resolve(parentValue, { ids }, context) {
         let callback;
         if (ids) {
           callback = () => Product.find({ _id: { $in: ids } });
