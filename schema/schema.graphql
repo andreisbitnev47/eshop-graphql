@@ -196,7 +196,7 @@ type Login {
 type Mutation {
   addUser(username: String!, email: String!, password: String!, role: String!): NewUser
   login(username: String!, password: String!): Login
-  addProduct(title: productTitleAddInput, descriptionShort: productDescriptionShortAddInput, descriptionLong: productDescriptionLongAddInput, weight: Int, amount: Int, available: Boolean, imgSmall: [String], imgBig: [String], price: Float!, featured: Boolean!): NewProduct
+  addProduct(title: productTitleAddInput, descriptionShort: productDescriptionShortAddInput, descriptionLong: productDescriptionLongAddInput, weight: Int, amount: Int, available: Boolean, imgSmall: [String], imgBig: [String], price: Float!, featured: Boolean): NewProduct
   editProduct(id: ID!, handle: String, title: productTitleEditInput, descriptionShort: productDescriptionShortEditInput, descriptionLong: productDescriptionLongEditInput, weight: Int, amount: Int, available: Boolean, imgSmall: [String], imgBig: [String], price: Float, featured: Boolean!): EditProduct
   deleteProduct(id: ID!): DeleteProduct
   deleteImage(id: String!): DeleteImage
