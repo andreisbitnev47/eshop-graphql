@@ -613,7 +613,7 @@ const mutation = new GraphQLObjectType({
         imgSmall: { type: new GraphQLList(GraphQLString)},
         imgBig: { type: new GraphQLList(GraphQLString)},
         price: { type: GraphQLFloat},
-        featured: { type: new GraphQLNonNull(GraphQLBoolean) }
+        featured: { type: GraphQLBoolean }
       },
       resolve: async (parentValue, args, context) => {
         const dbArgs = {};
