@@ -733,7 +733,8 @@ const mutation = new GraphQLObjectType({
             }
             const cheapestOption = shippingProvider.options.reduce((minOption, option) => (minOption.price < option.price ? minOption : option), shippingProvider.options[0]);
             // if total price is 20 or more, shipping is free
-            const totalWithShipping = total.gte(20) ? total.toFixed(2) : total.plus(Big(cheapestOption.price)).toFixed(2);
+            // const totalWithShipping = total.gte(20) ? total.toFixed(2) : total.plus(Big(cheapestOption.price)).toFixed(2);
+            const totalWithShipping = total.plus(Big(cheapestOption.price)).toFixed(2);
             const order = await new Order({
               phone,
               products,
@@ -759,7 +760,7 @@ const mutation = new GraphQLObjectType({
             return { order: null };
           }
           return { order: null };
-        } catch {
+        } catch (err) {
           return { order: null };
         }
       }
