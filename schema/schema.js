@@ -62,7 +62,7 @@ function getInvoiceToken(password) {
   })
 }
 
-async function sendOrderCompleteEmail(orderId, email, language = 'en', amount, invoice) {
+async function sendOrderCompleteEmail(orderId, email, language = 'en', amount, invoicePath) {
   return new Promise(async (resolve, reject) => {
     const content = await Content.findOne({ group: 'mail', handle: 'order_complete_mail' });
     if (!content) {
@@ -73,7 +73,7 @@ async function sendOrderCompleteEmail(orderId, email, language = 'en', amount, i
       .split('{{orderId}}').join(orderId)
       .split('{{amount}}').join(amount) : '');
     const text = paragraphArr.join('\n');
-    const result = await sendMail(text, subject, email, invoice);
+    const result = await sendMail(text, subject, email, invoicePath);
     resolve(result);
   })
 }
@@ -790,8 +790,8 @@ const mutation = new GraphQLObjectType({
               },
             }).save();
             await User.findByIdAndUpdate(user.id, { $push: { orders: order } });
-            const invoice = await generateInvoice(products, client, cheapestOption.price ? shippingProvider.name : null, order.id);
-            const emailSent = await sendOrderCompleteEmail(order.id, email, language, totalWithShipping, invoice);
+            const invoicePath = await generateInvoice(products, client, cheapestOption.price ? shippingProvider.name : null, order.id);
+            const emailSent = await sendOrderCompleteEmail(order.id, email, language, totalWithShipping, invoicePath);
             if (emailSent) {
               sendTelegramMessage(order.id, totalWithShipping, email);
               return { order };
