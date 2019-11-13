@@ -23,7 +23,6 @@ async function verifyRole(token, role, callback, rootValue) {
 
 function sendMail(text, subject, to, filePath) {
     return new Promise(async (resolve, reject) => {
-        console.log(`${process.env.INVOICES_PATH}/${filePath}`);
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
