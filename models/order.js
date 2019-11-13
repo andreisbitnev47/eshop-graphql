@@ -6,6 +6,7 @@ const OrderSchema = new Schema({
   totalWithShipping: { type: Number, required: true },
   status: { type: String, required: true },
   phone: { type: String },
+  client: { type: String },
   products: { type: [{
     productId: { type: String, required: true },
     title: { type: String, required: true },

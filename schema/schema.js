@@ -26,8 +26,43 @@ const saltRounds = 10;
 
 const jwt = require('jsonwebtoken');
 const Big = require('big.js');
+const request = require('request')
 
-async function sendOrderCompleteEmail(orderId, email, language = 'en', amount) {
+function generateInvoice(products, client, shippingProvider, viitenumber) {
+  return new Promise(async (resolve, reject) => {
+    const login = await getInvoiceToken(process.env.PASSWORD);
+    request.post(
+      process.env.INVOICE_URL,
+      {form: { 
+        productsJson: JSON.stringify(products),
+        client,
+        shippingProvider,
+        viitenumber,
+        login,
+      }},
+      (error, res, body) => {
+        if (error) {
+          console.error(error)
+          resolve(false)
+        }
+        console.log(`statusCode: ${res.statusCode}`)
+        resolve(body);
+      }
+    )
+  }) 
+}
+
+function getInvoiceToken(password) {
+  return new Promise((resolve, reject) => {
+      jwt.sign({ password }, process.env.SECRET2, (err, token) => {
+          if(!err) {
+              resolve(token);
+          }
+      });
+  })
+}
+
+async function sendOrderCompleteEmail(orderId, email, language = 'en', amount, invoice) {
   return new Promise(async (resolve, reject) => {
     const content = await Content.findOne({ group: 'mail', handle: 'order_complete_mail' });
     if (!content) {
@@ -38,7 +73,7 @@ async function sendOrderCompleteEmail(orderId, email, language = 'en', amount) {
       .split('{{orderId}}').join(orderId)
       .split('{{amount}}').join(amount) : '');
     const text = paragraphArr.join('\n');
-    const result = await sendMail(text, subject, email);
+    const result = await sendMail(text, subject, email, invoice);
     resolve(result);
   })
 }
@@ -141,6 +176,7 @@ function getOrderType(name) {
       id: { type: GraphQLID },
       phone: { type: GraphQLString },
       total: { type: GraphQLFloat },
+      client: { type: GraphQLString },
       totalWithShipping: { type: GraphQLFloat },
       status: { type: GraphQLString },
       products: { type: new GraphQLList(OrderProducts) },
@@ -681,6 +717,7 @@ const mutation = new GraphQLObjectType({
         shippingProviderAddress: { type: new GraphQLNonNull(GraphQLString) },
         email: { type: new GraphQLNonNull(GraphQLString) },
         phone: { type: GraphQLString },
+        client: { type: GraphQLString },
         language: { type: GraphQLString },
         orderProducts: {
           type: new GraphQLNonNull(new GraphQLList(new GraphQLInputObjectType({
@@ -692,7 +729,7 @@ const mutation = new GraphQLObjectType({
           }))),
         },
       },
-      resolve: async (parentValue, { email, orderProducts, shippingProviderId, phone, shippingProviderAddress, language }) => {
+      resolve: async (parentValue, { email, orderProducts, shippingProviderId, phone, client, shippingProviderAddress, language }) => {
         try {
           const productIds = orderProducts.map(({ id }) => id);
           let [user, dbProducts] = await Promise.all([
@@ -737,6 +774,7 @@ const mutation = new GraphQLObjectType({
             const totalWithShipping = total.plus(Big(cheapestOption.price)).toFixed(2);
             const order = await new Order({
               phone,
+              client,
               products,
               user,
               totalWithShipping: parseFloat(totalWithShipping),
@@ -752,7 +790,8 @@ const mutation = new GraphQLObjectType({
               },
             }).save();
             await User.findByIdAndUpdate(user.id, { $push: { orders: order } });
-            const emailSent = await sendOrderCompleteEmail(order.id, email, language, totalWithShipping);
+            const invoice = await generateInvoice(products, client, cheapestOption.price ? shippingProvider.name : null, order.id);
+            const emailSent = await sendOrderCompleteEmail(order.id, email, language, totalWithShipping, invoice);
             if (emailSent) {
               sendTelegramMessage(order.id, totalWithShipping, email);
               return { order };

@@ -201,7 +201,7 @@ type Mutation {
   deleteProduct(id: ID!): DeleteProduct
   deleteImage(id: String!): DeleteImage
   deleteImages(ids: [String]!): DeleteImages
-  addOrder(shippingProviderId: ID!, shippingProviderAddress: String!, email: String!, phone: String, language: String, orderProducts: [orderProductsInput]!): NewOrder
+  addOrder(shippingProviderId: ID!, shippingProviderAddress: String!, email: String!, phone: String, client: String, language: String, orderProducts: [orderProductsInput]!): NewOrder
   editOrder(id: ID!, status: String!): EditOrder
   deleteOrder(id: ID!): DeleteOrder
   addShippingProvider(name: String!, address: [String]!, options: [ShippingProviderOptionsInput]!): NewShippingProvider
@@ -241,6 +241,7 @@ type Order {
   id: ID
   phone: String
   total: Float
+  client: String
   totalWithShipping: Float
   status: String
   products: [OrderProducts]
@@ -408,6 +409,7 @@ type UserOrders {
   id: ID
   phone: String
   total: Float
+  client: String
   totalWithShipping: Float
   status: String
   products: [OrderProducts]

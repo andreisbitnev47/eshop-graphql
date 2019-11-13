@@ -21,7 +21,7 @@ async function verifyRole(token, role, callback, rootValue) {
 }
 
 
-function sendMail(text, subject, to) {
+function sendMail(text, subject, to, file) {
     return new Promise(async (resolve, reject) => {
         const transporter = nodemailer.createTransport({
             service: 'gmail',
@@ -36,7 +36,13 @@ function sendMail(text, subject, to) {
             to,
             subject,
             text,
-            };
+            attachments: [
+                {   // utf-8 string as an attachment
+                    filename: 'arve.pdf',
+                    content: file,
+                },
+            ]
+        };
         
         transporter.sendMail(mailOptions, function(error, info){
             if (error) {
