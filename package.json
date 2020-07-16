@@ -22,7 +22,7 @@
     "express-graphql": "^0.6.12",
     "graphql": "^0.13.2",
     "jsonwebtoken": "^8.5.0",
-    "lodash": "^4.17.11",
+    "lodash": "^4.17.19",
     "mongoose": "^5.0.13",
     "nodemailer": "^6.1.0",
     "request": "^2.88.0"
