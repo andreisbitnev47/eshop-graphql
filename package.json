@@ -12,7 +12,7 @@
     "url": "git+https://github.com/andreisbitnev47/eshop-graphql.git"
   },
   "dependencies": {
-    "bcrypt": "^3.0.4",
+    "bcrypt": "^5.0.0",
     "big.js": "^5.2.2",
     "body-parser": "^1.18.2",
     "cors": "^2.8.5",
