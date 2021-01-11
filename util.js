@@ -36,12 +36,12 @@ function sendMail(text, subject, to, filePath) {
             to,
             subject,
             text,
-            attachments: [
-                {   
-                    filename: 'arve.pdf',
-                    path: `${process.env.INVOICES_PATH}/${filePath}`,
-                },
-            ]
+            // attachments: [
+            //     {   
+            //         filename: 'arve.pdf',
+            //         path: `${process.env.INVOICES_PATH}/${filePath}`,
+            //     },
+            // ]
         };
         transporter.sendMail(mailOptions, function(error, info){
             if (error) {
