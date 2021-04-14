@@ -777,7 +777,8 @@ const mutation = new GraphQLObjectType({
             const year = date.getFullYear().toString();
 
             const lastInvoice = await Invoice.find({year}).sort({invoiceNr : -1}).limit(1);
-            const orderId = get(lastInvoice, '[0].invoiceNr', 0) + 1;
+            const nexInvoice = get(lastInvoice, '[0].invoiceNr', 0) + 1;
+            const orderId = `${year}-${nexInvoice}`;
             const order = await new Order({
               orderId,
               phone,
