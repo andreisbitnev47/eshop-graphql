@@ -175,6 +175,7 @@ function getOrderType(name) {
     name,
     fields: () => ({
       id: { type: GraphQLID },
+      orderId: { type: GraphQLString },
       phone: { type: GraphQLString },
       total: { type: GraphQLFloat },
       client: { type: GraphQLString },
