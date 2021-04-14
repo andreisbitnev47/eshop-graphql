@@ -16,6 +16,7 @@ const {
   GraphQLFloat } = graphql;
 const User = require('../models/user');
 const Order = require('../models/order');
+const Invoice = require('../models/invoice');
 const Product = require('../models/product');
 const Translation = require('../models/translation');
 const Content = require('../models/content');
@@ -772,7 +773,13 @@ const mutation = new GraphQLObjectType({
             // if total price is 20 or more, shipping is free
             // const totalWithShipping = total.gte(20) ? total.toFixed(2) : total.plus(Big(cheapestOption.price)).toFixed(2);
             const totalWithShipping = total.plus(Big(cheapestOption.price)).toFixed(2);
+            const date = new Date();
+            const year = date.getFullYear().toString();
+
+            const lastInvoice = await Invoice.find({year}).sort({invoiceNr : -1}).limit(1);
+            const orderId = get(lastInvoice, '[0].invoiceNr', 0) + 1;
             const order = await new Order({
+              orderId,
               phone,
               client,
               products,
@@ -791,9 +798,9 @@ const mutation = new GraphQLObjectType({
             }).save();
             await User.findByIdAndUpdate(user.id, { $push: { orders: order } });
             const invoicePath = await generateInvoice(products, client, cheapestOption.price ? shippingProvider.name : null, order.id);
-            const emailSent = await sendOrderCompleteEmail(order.id, email, language, totalWithShipping, invoicePath);
+            const emailSent = await sendOrderCompleteEmail(order.orderId, email, language, totalWithShipping, invoicePath);
             if (emailSent) {
-              sendTelegramMessage(order.id, totalWithShipping, email);
+              sendTelegramMessage(order.orderId, totalWithShipping, email);
               return { order };
             }
             return { order: null };
