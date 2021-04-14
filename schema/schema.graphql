@@ -239,6 +239,7 @@ type NewUser {
 
 type Order {
   id: ID
+  orderId: String
   phone: String
   total: Float
   client: String
@@ -407,6 +408,7 @@ type UserOfOrder {
 
 type UserOrders {
   id: ID
+  orderId: String
   phone: String
   total: Float
   client: String
