@@ -798,7 +798,7 @@ const mutation = new GraphQLObjectType({
               },
             }).save();
             await User.findByIdAndUpdate(user.id, { $push: { orders: order } });
-            const invoicePath = await generateInvoice(products, client, cheapestOption.price ? shippingProvider.name : null, order.id);
+            const invoicePath = await generateInvoice(products, client, cheapestOption.price ? shippingProvider.name : null, order.orderId);
             const emailSent = await sendOrderCompleteEmail(order.orderId, email, language, totalWithShipping, invoicePath);
             if (emailSent) {
               sendTelegramMessage(order.orderId, totalWithShipping, email);
